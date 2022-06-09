@@ -9,7 +9,7 @@ public class Peer  {
     private InetAddress address;
     private static Scanner sc = new Scanner(System.in);
 
-    private byte[] buf = new byte[1024];
+    private byte[] buf = new byte[1023];
 
     public Peer() {
         System.out.println("EchoClient");
