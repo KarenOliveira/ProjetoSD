@@ -9,6 +9,7 @@ public class Mensagem {
     private String port;
     private String content;
     private String action;
+    public Mensagem(){}
 
     public Mensagem(String action){
         this.action = action;

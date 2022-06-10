@@ -1,15 +1,21 @@
 package projetoSD;
 
+import java.io.IOException;
 import java.net.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Scanner;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import com.google.gson.Gson;
 public class Peer  {
     private DatagramSocket socket;
     private InetAddress address;
     private static Scanner sc = new Scanner(System.in);
-
-    private byte[] buf = new byte[1023];
 
     public Peer() {
         System.out.println("EchoClient");
@@ -22,16 +28,13 @@ public class Peer  {
     }
 
     public String sendEcho(Mensagem msg) {
+        byte[] buf = new byte[1024];
         System.out.println("sendEcho");
-        System.out.println("bufleng1 "+buf.length);
         try{
-        System.out.println("bufleng3 "+buf.length);
         DatagramPacket packet
                 = new DatagramPacket(new Gson().toJson(msg).getBytes(), new Gson().toJson(msg).getBytes().length, address, 10098);
         socket.send(packet);
-        System.out.println("bufleng4 "+buf.length);
         packet = new DatagramPacket(buf, buf.length);
-        System.out.println("bufleng5 "+buf.length);
         socket.receive(packet);
         String received = new String(
                 packet.getData(), 0, packet.getLength());
@@ -52,11 +55,34 @@ public class Peer  {
             System.out.println("Digite JOIN");
             entrada = sc.nextLine();
             if(entrada.startsWith("JOIN")){
-                System.out.println("MAin");
-                Peer client = new Peer();
-                System.out.println("Received:"+client.sendEcho(new Mensagem(entrada)));
-                client.close();
+                try{
+                    String[] entradaA = entrada.split("\\s+",-1);
+                    System.out.println("MAin");
+                    Peer client = new Peer();
+                    Mensagem mensagem = new Mensagem();
+                    mensagem.setAction(entradaA[0]);
+                    mensagem.setIp(entradaA[1]);
+                    mensagem.setPort(entradaA[2]);
+                    mensagem.setFileFolder(entradaA[3]);
+                    mensagem.setFileList(getFilesListByFolder(entradaA[3]));
+                    System.out.println("Received:"+client.sendEcho(mensagem));
+                    client.close();
+                }catch(ArrayIndexOutOfBoundsException e){
+                    System.out.println("Quantidade de Argumentos Inválido");
+                }
             }
+        }
+    }
+    public synchronized static List<String> getFilesListByFolder(String path){
+        System.out.println("RecegetFilesListByFolderived:"+path);
+        try (Stream<Path> paths = Files.walk(Paths.get(path))) {
+           return paths
+                .filter(Files::isRegularFile)
+                .map(fileItem -> fileItem.getFileName().toString())
+                .collect(Collectors.toList());
+        } catch(IOException e){
+            e.printStackTrace();
+            return new ArrayList<String>();
         }
     }
 }
