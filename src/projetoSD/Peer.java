@@ -6,12 +6,15 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Scanner;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+
 public class Peer  {
     private DatagramSocket socket;
     private InetAddress address;
@@ -26,13 +29,26 @@ public class Peer  {
             e.printStackTrace();
         }
     }
+    public Peer(String ip) {
+        System.out.println("EchoClient");
+        try {
+            socket = new DatagramSocket();
+            address = InetAddress.getByName(ip);
+        } catch (Exception e){
+            e.printStackTrace();
+        }
+    }
 
     public String sendEcho(Mensagem msg) {
         byte[] buf = new byte[1024];
         System.out.println("sendEcho");
         try{
+            Gson gson = new GsonBuilder()
+            .setLenient()
+            .create();
+            System.out.println("enviadndo: "+gson.toJson(msg));
         DatagramPacket packet
-                = new DatagramPacket(new Gson().toJson(msg).getBytes(), new Gson().toJson(msg).getBytes().length, address, 10098);
+                = new DatagramPacket(gson.toJson(msg).getBytes(), gson.toJson(msg).getBytes().length, address, 10098);
         socket.send(packet);
         packet = new DatagramPacket(buf, buf.length);
         socket.receive(packet);
@@ -58,13 +74,19 @@ public class Peer  {
                 try{
                     String[] entradaA = entrada.split("\\s+",-1);
                     System.out.println("MAin");
-                    Peer client = new Peer();
+                    Peer client = new Peer(entradaA[2]);
                     Mensagem mensagem = new Mensagem();
                     mensagem.setAction(entradaA[0]);
-                    mensagem.setIp(entradaA[1]);
-                    mensagem.setPort(entradaA[2]);
-                    mensagem.setFileFolder(entradaA[3]);
-                    mensagem.setFileList(getFilesListByFolder(entradaA[3]));
+                    mensagem.setFileList(getFilesListByFolder(entradaA[1]));
+                    mensagem.setPortUdp(entradaA[3]);
+                    List<String> portsTcp = new ArrayList<>();
+                    for(int i = 4;i<entradaA.length;i++){
+                        if(!entradaA[i].isEmpty()){
+                            portsTcp.add(entradaA[i]);
+                        }
+                    }
+                    Collections.sort(portsTcp);
+                    mensagem.setPortTcp(portsTcp);
                     System.out.println("Received:"+client.sendEcho(mensagem));
                     client.close();
                 }catch(ArrayIndexOutOfBoundsException e){

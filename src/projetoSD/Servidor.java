@@ -1,10 +1,15 @@
 package projetoSD;
 import java.net.*;
+import java.util.List;
+import java.util.Map;
 import java.util.Scanner;
+import java.util.concurrent.ConcurrentHashMap;
+
+import com.google.gson.Gson;
 public class Servidor {
     private  DatagramSocket socket;
     public String ip;
-
+    Map<String, List<String>> fileByServer = new ConcurrentHashMap<>();
     public Servidor(){
         boolean error;
         String entrada;
@@ -25,7 +30,7 @@ public class Servidor {
         sc.close();
         } while(error);
         new ServidorThread("ESCUTAR-UDP").start();
-        //new ServidorThread("ALIVE").start();
+        new ServidorThread("ALIVE").start();
     }
 
     public static void main(String[] args) {
@@ -58,6 +63,18 @@ public class Servidor {
                 }
                 socket.close();
             }if(this.funcao.equals("PROCESSAR-UDP")){
+                Mensagem mensagem = new Mensagem(buf);
+                if(mensagem.getAction().equals("JOIN")){
+                    StringBuilder sb = new StringBuilder();
+                    sb.append(packet.getAddress().getHostAddress());
+                    sb.append(";");
+                    sb.append(mensagem.getPortUdp());
+                    sb.append(";");
+                    sb.append(String.join(":", mensagem.getPortsTcp()));
+                    String peerString = sb.toString();
+                    fileByServer.put(peerString, mensagem.getFileList());
+                    System.out.println("Lista:"+new Gson().toJson(fileByServer));
+                }
                 try{
                     InetAddress address = packet.getAddress();
                     int port = packet.getPort();
