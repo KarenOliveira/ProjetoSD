@@ -24,18 +24,34 @@ public class Peer  {
         System.out.println("EchoClient");
         try {
             socket = new DatagramSocket();
-            address = InetAddress.getByName("localhost");
         } catch (Exception e){
             e.printStackTrace();
         }
-    }
-    public Peer(String ip) {
-        System.out.println("EchoClient");
-        try {
-            socket = new DatagramSocket();
-            address = InetAddress.getByName(ip);
-        } catch (Exception e){
-            e.printStackTrace();
+        String entrada;
+        while (true){
+            System.out.println("Digite JOIN");
+            entrada = sc.nextLine();
+            if(entrada.startsWith("JOIN")){
+                try{
+                    String[] entradaA = entrada.split("\\s+",-1);
+                    Mensagem mensagem = new Mensagem();
+                    mensagem.setAction(entradaA[0]);
+                    mensagem.setFileList(getFilesListByFolder(entradaA[1]));
+                    mensagem.setPortUdp(entradaA[3]);
+                    address = InetAddress.getByName(entradaA[2]);
+                    List<String> portsTcp = new ArrayList<>();
+                    for(int i = 4;i<entradaA.length;i++){
+                        if(!entradaA[i].isEmpty()){
+                            portsTcp.add(entradaA[i]);
+                        }
+                    }
+                    Collections.sort(portsTcp);
+                    mensagem.setPortTcp(portsTcp);
+                    System.out.println("Received:"+sendEcho(mensagem));
+                }catch(ArrayIndexOutOfBoundsException e){
+                    System.out.println("Quantidade de Argumentos Inválido");
+                }
+            }
         }
     }
 
@@ -66,34 +82,7 @@ public class Peer  {
     }
 
     public static void main(String[] args) {
-        String entrada;
-        while (true){
-            System.out.println("Digite JOIN");
-            entrada = sc.nextLine();
-            if(entrada.startsWith("JOIN")){
-                try{
-                    String[] entradaA = entrada.split("\\s+",-1);
-                    System.out.println("MAin");
-                    Peer client = new Peer(entradaA[2]);
-                    Mensagem mensagem = new Mensagem();
-                    mensagem.setAction(entradaA[0]);
-                    mensagem.setFileList(getFilesListByFolder(entradaA[1]));
-                    mensagem.setPortUdp(entradaA[3]);
-                    List<String> portsTcp = new ArrayList<>();
-                    for(int i = 4;i<entradaA.length;i++){
-                        if(!entradaA[i].isEmpty()){
-                            portsTcp.add(entradaA[i]);
-                        }
-                    }
-                    Collections.sort(portsTcp);
-                    mensagem.setPortTcp(portsTcp);
-                    System.out.println("Received:"+client.sendEcho(mensagem));
-                    client.close();
-                }catch(ArrayIndexOutOfBoundsException e){
-                    System.out.println("Quantidade de Argumentos Inválido");
-                }
-            }
-        }
+        new Peer();
     }
     public synchronized static List<String> getFilesListByFolder(String path){
         System.out.println("RecegetFilesListByFolderived:"+path);

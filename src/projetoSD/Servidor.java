@@ -4,11 +4,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.concurrent.ConcurrentHashMap;
-
 import com.google.gson.Gson;
+
 public class Servidor {
+    
     private  DatagramSocket socket;
     public String ip;
+
     Map<String, List<String>> fileByServer = new ConcurrentHashMap<>();
     public Servidor(){
         boolean error;
