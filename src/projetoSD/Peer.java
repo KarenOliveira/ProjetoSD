@@ -18,6 +18,7 @@ import com.google.gson.GsonBuilder;
 public class Peer  {
     private DatagramSocket socket;
     private InetAddress address;
+    private String ip;
     private static Scanner sc = new Scanner(System.in);
 
     public Peer() {
@@ -38,6 +39,7 @@ public class Peer  {
                     mensagem.setAction(entradaA[0]);
                     mensagem.setFileList(getFilesListByFolder(entradaA[1]));
                     mensagem.setPortUdp(entradaA[3]);
+                    ip = entradaA[2];
                     address = InetAddress.getByName(entradaA[2]);
                     List<String> portsTcp = new ArrayList<>();
                     for(int i = 4;i<entradaA.length;i++){
@@ -50,6 +52,8 @@ public class Peer  {
                     System.out.println("Received:"+sendEcho(mensagem));
                 }catch(ArrayIndexOutOfBoundsException e){
                     System.out.println("Quantidade de Argumentos Inválido");
+                } catch (UnknownHostException e) {
+                    System.out.println("Servidor ["+ip+"] não encontrado");
                 }
             }
         }
@@ -63,13 +67,13 @@ public class Peer  {
             .setLenient()
             .create();
             System.out.println("enviadndo: "+gson.toJson(msg));
-        DatagramPacket packet
-                = new DatagramPacket(gson.toJson(msg).getBytes(), gson.toJson(msg).getBytes().length, address, 10098);
-        socket.send(packet);
-        packet = new DatagramPacket(buf, buf.length);
-        socket.receive(packet);
-        String received = new String(
-                packet.getData(), 0, packet.getLength());
+            DatagramPacket packet
+                    = new DatagramPacket(gson.toJson(msg).getBytes(), gson.toJson(msg).getBytes().length, address, 10098);
+            socket.send(packet);
+            packet = new DatagramPacket(buf, buf.length);
+            socket.receive(packet);
+            String received = new String(
+                    packet.getData(), 0, packet.getLength());
             return received;
         }catch(Exception e){
             e.printStackTrace();
@@ -94,6 +98,17 @@ public class Peer  {
         } catch(IOException e){
             e.printStackTrace();
             return new ArrayList<String>();
+        }
+    }
+    class  PeerThread extends Thread{
+        private String funcao;
+
+        public PeerThread(String funcao){
+            this.funcao = funcao;
+        }
+
+        public void run(){
+                System.out.println("run");
         }
     }
 }

@@ -38,6 +38,7 @@ public class Servidor {
     public static void main(String[] args) {
         new Servidor();
     }
+    
     class  ServidorThread extends Thread{
         private String funcao;
         private DatagramPacket packet;
@@ -76,6 +77,8 @@ public class Servidor {
                     String peerString = sb.toString();
                     fileByServer.put(peerString, mensagem.getFileList());
                     System.out.println("Lista:"+new Gson().toJson(fileByServer));
+                    Mensagem retorno  = new Mensagem("JOIN_OK");
+                    buf = new Gson().toJson(retorno).getBytes();
                 }
                 try{
                     InetAddress address = packet.getAddress();
