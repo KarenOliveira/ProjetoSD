@@ -29,13 +29,13 @@ public class Peer  {
             e.printStackTrace();
         }
         String entrada;
+        Mensagem mensagem = new Mensagem();
         while (true){
             System.out.println("Digite JOIN");
             entrada = sc.nextLine();
             if(entrada.startsWith("JOIN")){
                 try{
                     String[] entradaA = entrada.split("\\s+",-1);
-                    Mensagem mensagem = new Mensagem();
                     mensagem.setAction(entradaA[0]);
                     mensagem.setFileList(getFilesListByFolder(entradaA[1]));
                     mensagem.setPortUdp(entradaA[3]);
@@ -49,17 +49,43 @@ public class Peer  {
                     }
                     Collections.sort(portsTcp);
                     mensagem.setPortTcp(portsTcp);
-                    System.out.println("Received:"+sendEcho(mensagem));
+                    Mensagem retorno = sendEcho(mensagem);
+                    if(retorno.getAction().equals("JOIN_OK")){
+                        System.out.println("ALIVE ABERTO");
+                        //new PeerThread("ESCUTAR-ALIVE",mensagem).start();
+                    }
+                    
                 }catch(ArrayIndexOutOfBoundsException e){
                     System.out.println("Quantidade de Argumentos Inválido");
                 } catch (UnknownHostException e) {
                     System.out.println("Servidor ["+ip+"] não encontrado");
                 }
             }
+            else if(entrada.startsWith("LEAVE")){
+                try{
+                    String[] entradaA = entrada.split("\\s+",-1);
+                    mensagem.setAction(entradaA[0]);
+                    System.out.println("Received:"+sendEcho(mensagem));
+                }catch(ArrayIndexOutOfBoundsException e){
+                    System.out.println("Quantidade de Argumentos Inválido");
+                }
+            }
+            else if(entrada.startsWith("SEARCH")){
+                try{
+                    String fileName = entrada.substring(entrada.indexOf(" ")+1);
+                    System.out.println("FileName: "+fileName);
+                    String[] entradaA = entrada.split("\\s+",-1);
+                    mensagem.setAction("SEARCH");
+                    mensagem.setFileName(fileName);
+                    System.out.println("Received:"+sendEcho(mensagem));
+                }catch(ArrayIndexOutOfBoundsException e){
+                    System.out.println("Quantidade de Argumentos Inválido");
+                }
+            }
         }
     }
 
-    public String sendEcho(Mensagem msg) {
+    public Mensagem sendEcho(Mensagem msg) {
         byte[] buf = new byte[1024];
         System.out.println("sendEcho");
         try{
@@ -72,12 +98,10 @@ public class Peer  {
             socket.send(packet);
             packet = new DatagramPacket(buf, buf.length);
             socket.receive(packet);
-            String received = new String(
-                    packet.getData(), 0, packet.getLength());
-            return received;
+            return new Mensagem(packet.getData());
         }catch(Exception e){
             e.printStackTrace();
-            return "";
+            return new Mensagem();
         }
     }
 
@@ -89,7 +113,6 @@ public class Peer  {
         new Peer();
     }
     public synchronized static List<String> getFilesListByFolder(String path){
-        System.out.println("RecegetFilesListByFolderived:"+path);
         try (Stream<Path> paths = Files.walk(Paths.get(path))) {
            return paths
                 .filter(Files::isRegularFile)
@@ -102,13 +125,50 @@ public class Peer  {
     }
     class  PeerThread extends Thread{
         private String funcao;
+        private Mensagem mensagem;
+        private DatagramSocket socketUdp;
+        private DatagramPacket packetUdp;
+        private byte[] buf = new byte[1024];
 
-        public PeerThread(String funcao){
+
+        public PeerThread(String funcao,Mensagem mensagem){
             this.funcao = funcao;
+            this.mensagem = mensagem;
+        }
+        public PeerThread(String funcao,Mensagem mensagem,DatagramSocket socketUdp,DatagramPacket packetUdp){
+            this.funcao = funcao;
+            this.mensagem = mensagem;
+            this.socketUdp = socketUdp;
+            this.packetUdp = packetUdp;
         }
 
         public void run(){
-                System.out.println("run");
+            boolean running = true;
+            System.out.println("run");
+            if(this.funcao.equals("ALIVE")){
+                while (running) {
+                    try {
+                        InetAddress addressServer = InetAddress.getByName("localhost");
+                        socket = new DatagramSocket(Integer.parseInt(mensagem.getPortUdp()),addressServer);
+                        DatagramPacket packet
+                                = new DatagramPacket(buf, buf.length);
+                        socket.receive(packet);
+                        System.out.println("PROCESSA-ALIVE");
+                        try{
+                            InetAddress address = packetUdp.getAddress();
+                            int port = packetUdp.getPort();
+                            Mensagem retorno = new Mensagem("ALIVE_OK");
+                            buf = new Gson().toJson(retorno).getBytes();
+                            packetUdp = new DatagramPacket(buf, buf.length, address, port);
+                            socket.send(packetUdp);
+                        }catch (Exception e){
+                            e.printStackTrace();
+                        }                  
+                    }catch (Exception e){
+                        e.printStackTrace();
+                    }
+                }
+            }
         }
     }
 }

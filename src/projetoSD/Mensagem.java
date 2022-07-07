@@ -11,10 +11,24 @@ public class Mensagem {
     private List<String> portsTcp;
     private String content;
     private String action;
+    private String fileName;
+    private List<String> peerList;
+    public List<String> getPeerList() {
+        return peerList;
+    }
+    public void setPeerList(List<String> peerList) {
+        this.peerList = peerList;
+    }
+    public String getFileName() {
+        return fileName;
+    }
+    public void setFileName(String fileName) {
+        this.fileName = fileName;
+    }
     public Mensagem(){}
     public Mensagem(byte[] buf){
         String json = new String(buf);
-        System.out.println("Message: "+json);
+        //System.out.println("Message: "+json);
         JsonReader reader = new JsonReader(new StringReader(json));
         reader.setLenient(true);
         Mensagem fromJson = new Gson().fromJson(reader, Mensagem.class);
@@ -23,8 +37,11 @@ public class Mensagem {
         this.content = fromJson.getContent();
         this.action = fromJson.getAction();
         this.portsTcp = fromJson.getPortsTcp();
+        this.fileName = fromJson.getFileName();
     }
-
+    public Mensagem(List<String> peerList){
+        this.peerList = peerList;
+    }
     public Mensagem(List<String> fileList, String portUdp,List<String> portsTcp, String content, String action) {
         this.fileList = fileList;
         this.portUdp = portUdp;
