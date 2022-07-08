@@ -22,7 +22,6 @@ public class Peer  {
     private static Scanner sc = new Scanner(System.in);
 
     public Peer() {
-        System.out.println("EchoClient");
         try {
             socket = new DatagramSocket();
         } catch (Exception e){
@@ -52,7 +51,7 @@ public class Peer  {
                     Mensagem retorno = sendEcho(mensagem);
                     if(retorno.getAction().equals("JOIN_OK")){
                         System.out.println("ALIVE ABERTO");
-                        //new PeerThread("ESCUTAR-ALIVE",mensagem).start();
+                        new PeerThread("ALIVE",mensagem).start();
                     }
                     
                 }catch(ArrayIndexOutOfBoundsException e){
@@ -74,7 +73,6 @@ public class Peer  {
                 try{
                     String fileName = entrada.substring(entrada.indexOf(" ")+1);
                     System.out.println("FileName: "+fileName);
-                    String[] entradaA = entrada.split("\\s+",-1);
                     mensagem.setAction("SEARCH");
                     mensagem.setFileName(fileName);
                     System.out.println("Received:"+sendEcho(mensagem));
@@ -126,8 +124,6 @@ public class Peer  {
     class  PeerThread extends Thread{
         private String funcao;
         private Mensagem mensagem;
-        private DatagramSocket socketUdp;
-        private DatagramPacket packetUdp;
         private byte[] buf = new byte[1024];
 
 
@@ -135,32 +131,27 @@ public class Peer  {
             this.funcao = funcao;
             this.mensagem = mensagem;
         }
-        public PeerThread(String funcao,Mensagem mensagem,DatagramSocket socketUdp,DatagramPacket packetUdp){
-            this.funcao = funcao;
-            this.mensagem = mensagem;
-            this.socketUdp = socketUdp;
-            this.packetUdp = packetUdp;
-        }
 
         public void run(){
             boolean running = true;
-            System.out.println("run");
             if(this.funcao.equals("ALIVE")){
+                try {
+                    socket = new DatagramSocket(Integer.parseInt(mensagem.getPortUdp()),address);
+                } catch (NumberFormatException | SocketException e1) {
+                    // TODO Auto-generated catch block
+                    e1.printStackTrace();
+                }
                 while (running) {
                     try {
-                        InetAddress addressServer = InetAddress.getByName("localhost");
-                        socket = new DatagramSocket(Integer.parseInt(mensagem.getPortUdp()),addressServer);
                         DatagramPacket packet
                                 = new DatagramPacket(buf, buf.length);
                         socket.receive(packet);
-                        System.out.println("PROCESSA-ALIVE");
+                        System.out.println("Pack.receive:"+new Gson().toJson(new Mensagem(packet.getData())));
                         try{
-                            InetAddress address = packetUdp.getAddress();
-                            int port = packetUdp.getPort();
                             Mensagem retorno = new Mensagem("ALIVE_OK");
                             buf = new Gson().toJson(retorno).getBytes();
-                            packetUdp = new DatagramPacket(buf, buf.length, address, port);
-                            socket.send(packetUdp);
+                            packet = new DatagramPacket(buf, buf.length, address, 10098);
+                            socket.send(packet);
                         }catch (Exception e){
                             e.printStackTrace();
                         }                  

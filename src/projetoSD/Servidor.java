@@ -5,9 +5,7 @@ import java.util.Map;
 import java.util.Scanner;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
-
 import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 
 public class Servidor {
     
@@ -41,7 +39,6 @@ public class Servidor {
     public static void main(String[] args) {
         new Servidor();
     }
-    
     class  ServidorThread extends Thread{
         private String funcao;
         private DatagramPacket packet;
@@ -82,18 +79,28 @@ public class Servidor {
                         // TODO Auto-generated catch block
                         e.printStackTrace();
                     }
-                    System.out.println("ALIVE-COMEÇANDO");
-                    System.out.println("Size keySet: "+fileByServer.keySet().size());
                     fileByServer.keySet()
                         .stream()
                         .forEach(key->{
                             new ServidorThread("SEND-ALIVE",key).start();
                     });   
-                    System.out.println("ALIVE-TERMINOU");
                 }
             }
             else if(this.funcao.equals("SEND-ALIVE")){
-                System.out.println("SEND ALIVE FOR:"+url);
+                byte[] buf = new byte[1024];
+                try{
+                    String[] arrayKey = url.split(";",-1);
+                    InetAddress address = InetAddress.getByName(arrayKey[0]);
+                    byte[] send = new Gson().toJson(new Mensagem("ALIVE")).getBytes();
+                    int port = Integer.parseInt(arrayKey[1]);
+                    packet = new DatagramPacket(send, send.length, address, port);
+                    socket.send(packet);
+                    packet = new DatagramPacket(buf, buf.length);
+                    socket.receive(packet);
+                
+                }catch(Exception e){
+                    e.printStackTrace();
+                }
             }
             else if(this.funcao.equals("PROCESSAR-UDP")){
                 Mensagem mensagem = new Mensagem(buf);
@@ -119,7 +126,6 @@ public class Servidor {
                     sb.append(String.join(":", mensagem.getPortsTcp()));
                     String peerString = sb.toString();
                     fileByServer.remove(peerString);
-                    //System.out.println("Lista:"+new Gson().toJson(fileByServer));
                     Mensagem retorno  = new Mensagem("LEAVE_OK");
                     buf = new Gson().toJson(retorno).getBytes();
                 }
