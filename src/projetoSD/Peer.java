@@ -94,8 +94,11 @@ public class Peer  {
             DatagramPacket packet
                     = new DatagramPacket(gson.toJson(msg).getBytes(), gson.toJson(msg).getBytes().length, address, 10098);
             socket.send(packet);
+            System.out.println("send:");
             packet = new DatagramPacket(buf, buf.length);
+            System.out.println("rece:");
             socket.receive(packet);
+            System.out.println("after:");
             return new Mensagem(packet.getData());
         }catch(Exception e){
             e.printStackTrace();
@@ -142,9 +145,11 @@ public class Peer  {
                     e1.printStackTrace();
                 }
                 while (running) {
+                    System.out.println("whilte");
                     try {
                         DatagramPacket packet
                                 = new DatagramPacket(buf, buf.length);
+                                System.out.println("beforereceive");
                         socket.receive(packet);
                         System.out.println("Pack.receive:"+new Gson().toJson(new Mensagem(packet.getData())));
                         try{

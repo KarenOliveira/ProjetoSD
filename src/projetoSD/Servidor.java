@@ -44,6 +44,7 @@ public class Servidor {
         private DatagramPacket packet;
         private String url;
         private byte[] buf = new byte[1024];
+        private Mensagem mensagem;
         public ServidorThread(String funcao){
             this.funcao = funcao;
         }
@@ -97,7 +98,12 @@ public class Servidor {
                     socket.send(packet);
                     packet = new DatagramPacket(buf, buf.length);
                     socket.receive(packet);
-                
+                    System.out.println("Pack.receive-SEND-ALIVE:"+new Gson().toJson(new Mensagem(packet.getData())));
+                    mensagem = new Mensagem(packet.getData());
+                    if(!mensagem.getAction().equals("ALIVE_OK")){
+                        fileByServer.remove(url);
+                        System.out.println("URL REMOVIDA:"+url);
+                    }
                 }catch(Exception e){
                     e.printStackTrace();
                 }
