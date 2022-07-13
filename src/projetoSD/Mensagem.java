@@ -28,7 +28,6 @@ public class Mensagem {
     public Mensagem(){}
     public Mensagem(byte[] buf){
         String json = new String(buf);
-        //System.out.println("Message: "+json);
         JsonReader reader = new JsonReader(new StringReader(json));
         reader.setLenient(true);
         Mensagem fromJson = new Gson().fromJson(reader, Mensagem.class);
@@ -93,6 +92,14 @@ public class Mensagem {
     public void setFileList(List<String> fileList) {
         this.fileList = fileList;
     }
-
+    public String buildUrl(String ip, Mensagem mensagem){
+        StringBuilder sb = new StringBuilder();
+        sb.append(ip);
+        sb.append(";");
+        sb.append(mensagem.getPortUdp());
+        sb.append(";");
+        sb.append(String.join(":", mensagem.getPortsTcp()));
+        return sb.toString();
+    }
 
 }

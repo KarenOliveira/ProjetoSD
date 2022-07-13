@@ -75,7 +75,7 @@ public class Servidor {
             else if(this.funcao.equals("ALIVE")){
                 while(running){
                     try {
-                        Thread.sleep(3000);
+                        Thread.sleep(30000);
                     } catch (InterruptedException e) {
                         // TODO Auto-generated catch block
                         e.printStackTrace();
@@ -98,11 +98,11 @@ public class Servidor {
                     socket.send(packet);
                     packet = new DatagramPacket(buf, buf.length);
                     socket.receive(packet);
-                    System.out.println("Pack.receive-SEND-ALIVE:"+new Gson().toJson(new Mensagem(packet.getData())));
+                    //System.out.println("Pack.receive-SEND-ALIVE:"+new Gson().toJson(new Mensagem(packet.getData())));
                     mensagem = new Mensagem(packet.getData());
                     if(!mensagem.getAction().equals("ALIVE_OK")){
                         fileByServer.remove(url);
-                        System.out.println("URL REMOVIDA:"+url);
+                        //System.out.println("URL REMOVIDA:"+url);
                     }
                 }catch(Exception e){
                     e.printStackTrace();
@@ -111,26 +111,14 @@ public class Servidor {
             else if(this.funcao.equals("PROCESSAR-UDP")){
                 Mensagem mensagem = new Mensagem(buf);
                 if(mensagem.getAction().equals("JOIN")){
-                    StringBuilder sb = new StringBuilder();
-                    sb.append(packet.getAddress().getHostAddress());
-                    sb.append(";");
-                    sb.append(mensagem.getPortUdp());
-                    sb.append(";");
-                    sb.append(String.join(":", mensagem.getPortsTcp()));
-                    String peerString = sb.toString();
+                    String peerString = mensagem.buildUrl(packet.getAddress().getHostAddress(), mensagem);
                     fileByServer.put(peerString, mensagem.getFileList());
                     System.out.println("Lista:"+new Gson().toJson(fileByServer));
                     Mensagem retorno  = new Mensagem("JOIN_OK");
                     buf = new Gson().toJson(retorno).getBytes();
                 }
                 else if(mensagem.getAction().equals("LEAVE")){
-                    StringBuilder sb = new StringBuilder();
-                    sb.append(packet.getAddress().getHostAddress());
-                    sb.append(";");
-                    sb.append(mensagem.getPortUdp());
-                    sb.append(";");
-                    sb.append(String.join(":", mensagem.getPortsTcp()));
-                    String peerString = sb.toString();
+                    String peerString = mensagem.buildUrl(packet.getAddress().getHostAddress(), mensagem);
                     fileByServer.remove(peerString);
                     Mensagem retorno  = new Mensagem("LEAVE_OK");
                     buf = new Gson().toJson(retorno).getBytes();

@@ -30,7 +30,7 @@ public class Peer  {
         String entrada;
         Mensagem mensagem = new Mensagem();
         while (true){
-            System.out.println("Digite JOIN");
+            System.out.println("Digite Comando");
             entrada = sc.nextLine();
             if(entrada.startsWith("JOIN")){
                 try{
@@ -50,7 +50,6 @@ public class Peer  {
                     mensagem.setPortTcp(portsTcp);
                     Mensagem retorno = sendEcho(mensagem);
                     if(retorno.getAction().equals("JOIN_OK")){
-                        System.out.println("ALIVE ABERTO");
                         new PeerThread("ALIVE",mensagem).start();
                     }
                     
@@ -72,7 +71,6 @@ public class Peer  {
             else if(entrada.startsWith("SEARCH")){
                 try{
                     String fileName = entrada.substring(entrada.indexOf(" ")+1);
-                    System.out.println("FileName: "+fileName);
                     mensagem.setAction("SEARCH");
                     mensagem.setFileName(fileName);
                     System.out.println("Received:"+sendEcho(mensagem));
@@ -85,20 +83,21 @@ public class Peer  {
 
     public Mensagem sendEcho(Mensagem msg) {
         byte[] buf = new byte[1024];
-        System.out.println("sendEcho");
+        //System.out.println("sendEcho");
         try{
             Gson gson = new GsonBuilder()
             .setLenient()
             .create();
-            System.out.println("enviadndo: "+gson.toJson(msg));
+            //System.out.println("enviadndo: "+gson.toJson(msg));
             DatagramPacket packet
                     = new DatagramPacket(gson.toJson(msg).getBytes(), gson.toJson(msg).getBytes().length, address, 10098);
             socket.send(packet);
-            System.out.println("send:");
+            socket.setSoTimeout(5000);
+            //System.out.println("send:");
             packet = new DatagramPacket(buf, buf.length);
-            System.out.println("rece:");
+            //System.out.println("rece:");
             socket.receive(packet);
-            System.out.println("after:");
+            //System.out.println("after:");
             return new Mensagem(packet.getData());
         }catch(Exception e){
             e.printStackTrace();
@@ -145,13 +144,10 @@ public class Peer  {
                     e1.printStackTrace();
                 }
                 while (running) {
-                    System.out.println("whilte");
                     try {
                         DatagramPacket packet
                                 = new DatagramPacket(buf, buf.length);
-                                System.out.println("beforereceive");
                         socket.receive(packet);
-                        System.out.println("Pack.receive:"+new Gson().toJson(new Mensagem(packet.getData())));
                         try{
                             Mensagem retorno = new Mensagem("ALIVE_OK");
                             buf = new Gson().toJson(retorno).getBytes();
