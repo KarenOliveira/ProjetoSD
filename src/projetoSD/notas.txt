@@ -1,3 +1,0 @@
-JOIN /home/ufabc/Documentos/teste-peer localhost 9000 9090 100000
-
-somente retornar a exception caso porta ocupada

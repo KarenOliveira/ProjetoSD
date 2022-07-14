@@ -40,6 +40,8 @@ public class Servidor {
         new Servidor();
     }
     class  ServidorThread extends Thread{
+
+        private static final int sleepTime = 3000;
         private String funcao;
         private DatagramPacket packet;
         private String url;
@@ -75,7 +77,7 @@ public class Servidor {
             else if(this.funcao.equals("ALIVE")){
                 while(running){
                     try {
-                        Thread.sleep(30000);
+                        Thread.sleep(sleepTime);
                     } catch (InterruptedException e) {
                         // TODO Auto-generated catch block
                         e.printStackTrace();
@@ -98,11 +100,9 @@ public class Servidor {
                     socket.send(packet);
                     packet = new DatagramPacket(buf, buf.length);
                     socket.receive(packet);
-                    //System.out.println("Pack.receive-SEND-ALIVE:"+new Gson().toJson(new Mensagem(packet.getData())));
                     mensagem = new Mensagem(packet.getData());
                     if(!mensagem.getAction().equals("ALIVE_OK")){
                         fileByServer.remove(url);
-                        //System.out.println("URL REMOVIDA:"+url);
                     }
                 }catch(Exception e){
                     e.printStackTrace();

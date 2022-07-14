@@ -3,6 +3,7 @@ package projetoSD;
 import java.io.IOException;
 import java.net.*;
 import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -57,6 +58,8 @@ public class Peer  {
                     System.out.println("Quantidade de Argumentos Inválido");
                 } catch (UnknownHostException e) {
                     System.out.println("Servidor ["+ip+"] não encontrado");
+                } catch (IOException e){
+                    System.out.println("O Path passado não é válido, favor verificar os Arquivos");
                 }
             }
             else if(entrada.startsWith("LEAVE")){
@@ -83,21 +86,16 @@ public class Peer  {
 
     public Mensagem sendEcho(Mensagem msg) {
         byte[] buf = new byte[1024];
-        //System.out.println("sendEcho");
         try{
             Gson gson = new GsonBuilder()
             .setLenient()
             .create();
-            //System.out.println("enviadndo: "+gson.toJson(msg));
             DatagramPacket packet
                     = new DatagramPacket(gson.toJson(msg).getBytes(), gson.toJson(msg).getBytes().length, address, 10098);
             socket.send(packet);
             socket.setSoTimeout(5000);
-            //System.out.println("send:");
             packet = new DatagramPacket(buf, buf.length);
-            //System.out.println("rece:");
-            socket.receive(packet);
-            //System.out.println("after:");
+            socket.receive(packet); 
             return new Mensagem(packet.getData());
         }catch(Exception e){
             e.printStackTrace();
@@ -112,15 +110,15 @@ public class Peer  {
     public static void main(String[] args) {
         new Peer();
     }
-    public synchronized static List<String> getFilesListByFolder(String path){
+    public synchronized static List<String> getFilesListByFolder(String path) throws IOException{
         try (Stream<Path> paths = Files.walk(Paths.get(path))) {
            return paths
                 .filter(Files::isRegularFile)
                 .map(fileItem -> fileItem.getFileName().toString())
                 .collect(Collectors.toList());
-        } catch(IOException e){
+        } catch(final IOException e){
             e.printStackTrace();
-            return new ArrayList<String>();
+            throw new IOException();
         }
     }
     class  PeerThread extends Thread{
@@ -139,9 +137,15 @@ public class Peer  {
             if(this.funcao.equals("ALIVE")){
                 try {
                     socket = new DatagramSocket(Integer.parseInt(mensagem.getPortUdp()),address);
-                } catch (NumberFormatException | SocketException e1) {
-                    // TODO Auto-generated catch block
-                    e1.printStackTrace();
+                } catch (NumberFormatException e) {
+                    e.printStackTrace();
+                
+                } catch (BindException e){
+                    System.out.println("BINDeXCEPTION");
+                    e.printStackTrace();
+                }
+                catch (SocketException e){
+                    e.printStackTrace();
                 }
                 while (running) {
                     try {
