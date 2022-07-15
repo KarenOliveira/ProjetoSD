@@ -11,6 +11,7 @@ public class Servidor {
     
     private  DatagramSocket socket;
     public String ip;
+    private static final int sleepTime = 3000;
 
     Map<String, List<String>> fileByServer = new ConcurrentHashMap<>();
     public Servidor(){
@@ -41,7 +42,7 @@ public class Servidor {
     }
     class  ServidorThread extends Thread{
 
-        private static final int sleepTime = 3000;
+       
         private String funcao;
         private DatagramPacket packet;
         private String url;

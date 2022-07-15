@@ -1,9 +1,13 @@
 package projetoSD;
 
 import java.io.IOException;
-import java.net.*;
+import java.net.BindException;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
+import java.net.SocketException;
+import java.net.UnknownHostException;
 import java.nio.file.Files;
-import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -51,7 +55,12 @@ public class Peer  {
                     mensagem.setPortTcp(portsTcp);
                     Mensagem retorno = sendEcho(mensagem);
                     if(retorno.getAction().equals("JOIN_OK")){
-                        new PeerThread("ALIVE",mensagem).start();
+                        PeerThread pt = new PeerThread("ALIVE",mensagem);
+                        pt.setUncaughtExceptionHandler((th, ex)-> {
+                            System.out.println((String.format("Exception in thread %d id: %s", th.getId(), ex)));
+                            throw new RuntimeException(ex);
+                        });
+                        pt.start();
                     }
                     
                 }catch(ArrayIndexOutOfBoundsException e){
@@ -60,6 +69,12 @@ public class Peer  {
                     System.out.println("Servidor ["+ip+"] não encontrado");
                 } catch (IOException e){
                     System.out.println("O Path passado não é válido, favor verificar os Arquivos");
+                }  catch (RuntimeException e){
+                    System.out.println("Chegou aquirt");
+                    e.printStackTrace(); 
+                } catch (Exception e){
+                    System.out.println("Chegou aqui");
+                    e.printStackTrace();
                 }
             }
             else if(entrada.startsWith("LEAVE")){
@@ -141,8 +156,8 @@ public class Peer  {
                     e.printStackTrace();
                 
                 } catch (BindException e){
-                    System.out.println("BINDeXCEPTION");
                     e.printStackTrace();
+                    throw new RuntimeException(e);
                 }
                 catch (SocketException e){
                     e.printStackTrace();
