@@ -55,12 +55,7 @@ public class Peer  {
                     mensagem.setPortTcp(portsTcp);
                     Mensagem retorno = sendEcho(mensagem);
                     if(retorno.getAction().equals("JOIN_OK")){
-                        PeerThread pt = new PeerThread("ALIVE",mensagem);
-                        pt.setUncaughtExceptionHandler((th, ex)-> {
-                            System.out.println((String.format("Exception in thread %d id: %s", th.getId(), ex)));
-                            throw new RuntimeException(ex);
-                        });
-                        pt.start();
+                        new PeerThread("ALIVE",mensagem).start();
                     }
                     
                 }catch(ArrayIndexOutOfBoundsException e){
@@ -69,15 +64,11 @@ public class Peer  {
                     System.out.println("Servidor ["+ip+"] não encontrado");
                 } catch (IOException e){
                     System.out.println("O Path passado não é válido, favor verificar os Arquivos");
-                }  catch (RuntimeException e){
-                    System.out.println("Chegou aquirt");
-                    e.printStackTrace(); 
                 } catch (Exception e){
                     System.out.println("Chegou aqui");
                     e.printStackTrace();
                 }
-            }
-            else if(entrada.startsWith("LEAVE")){
+            }else if(entrada.startsWith("LEAVE")){
                 try{
                     String[] entradaA = entrada.split("\\s+",-1);
                     mensagem.setAction(entradaA[0]);
@@ -85,8 +76,7 @@ public class Peer  {
                 }catch(ArrayIndexOutOfBoundsException e){
                     System.out.println("Quantidade de Argumentos Inválido");
                 }
-            }
-            else if(entrada.startsWith("SEARCH")){
+            }else if(entrada.startsWith("SEARCH")){
                 try{
                     String fileName = entrada.substring(entrada.indexOf(" ")+1);
                     mensagem.setAction("SEARCH");
@@ -167,14 +157,10 @@ public class Peer  {
                         DatagramPacket packet
                                 = new DatagramPacket(buf, buf.length);
                         socket.receive(packet);
-                        try{
-                            Mensagem retorno = new Mensagem("ALIVE_OK");
-                            buf = new Gson().toJson(retorno).getBytes();
-                            packet = new DatagramPacket(buf, buf.length, address, 10098);
-                            socket.send(packet);
-                        }catch (Exception e){
-                            e.printStackTrace();
-                        }                  
+                        Mensagem retorno = new Mensagem("ALIVE_OK");
+                        buf = new Gson().toJson(retorno).getBytes();
+                        packet = new DatagramPacket(buf, buf.length, address, 10098);
+                        socket.send(packet);              
                     }catch (Exception e){
                         e.printStackTrace();
                     }

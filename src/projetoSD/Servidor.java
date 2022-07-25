@@ -10,9 +10,8 @@ import com.google.gson.Gson;
 public class Servidor {
     
     private  DatagramSocket socket;
-    public String ip;
+    private int port = 10098;
     private static final int sleepTime = 3000;
-
     Map<String, List<String>> fileByServer = new ConcurrentHashMap<>();
     public Servidor(){
         boolean error;
@@ -25,12 +24,11 @@ public class Servidor {
                 System.out.println("Digite IP do Server");
                 entrada = sc.nextLine();
                  addressServer = InetAddress.getByName(entrada);
-                socket = new DatagramSocket(10098,addressServer);
+                socket = new DatagramSocket(port,addressServer);
             }catch(Exception e){
                 System.out.println("Erro no IP");
                 error = true;
             }
-            this.ip = addressServer.getHostAddress();
         sc.close();
         } while(error);
         new ServidorThread("ESCUTAR-UDP").start();
@@ -117,14 +115,12 @@ public class Servidor {
                     System.out.println("Lista:"+new Gson().toJson(fileByServer));
                     Mensagem retorno  = new Mensagem("JOIN_OK");
                     buf = new Gson().toJson(retorno).getBytes();
-                }
-                else if(mensagem.getAction().equals("LEAVE")){
+                }else if(mensagem.getAction().equals("LEAVE")){
                     String peerString = mensagem.buildUrl(packet.getAddress().getHostAddress(), mensagem);
                     fileByServer.remove(peerString);
                     Mensagem retorno  = new Mensagem("LEAVE_OK");
                     buf = new Gson().toJson(retorno).getBytes();
-                }
-                else if(mensagem.getAction().equals("SEARCH")){
+                }else if(mensagem.getAction().equals("SEARCH")){
                     System.out.println("Search: "+mensagem.getFileName());
                     List<String> listPeers = fileByServer.entrySet()
                         .stream()
@@ -134,7 +130,6 @@ public class Servidor {
                     Mensagem retorno  = new Mensagem(listPeers);
                     buf = new Gson().toJson(retorno).getBytes();
                 }
-                
                 try{
                     InetAddress address = packet.getAddress();
                     int port = packet.getPort();
