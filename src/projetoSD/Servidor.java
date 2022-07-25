@@ -1,18 +1,19 @@
 package projetoSD;
 import java.net.*;
-import java.util.List;
-import java.util.Map;
-import java.util.Scanner;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import com.google.gson.Gson;
 
 public class Servidor {
     
-    private  DatagramSocket socket;
+    private  DatagramSocket socketProcess;
+    private  DatagramSocket socketAlive;
     private int PORT = 10098;
-    private static final int sleepTime = 20000;
+    private int PORT_ALIVE = 10099;
+    private static final int sleepTime = 30000;
     Map<String, List<String>> fileByServer = new ConcurrentHashMap<>();
+
     public Servidor(){
         boolean error;
         String entrada;
@@ -23,8 +24,9 @@ public class Servidor {
             try{
                 System.out.println("Digite IP do Server");
                 entrada = sc.nextLine();
-                 addressServer = InetAddress.getByName(entrada);
-                socket = new DatagramSocket(PORT,addressServer);
+                addressServer = InetAddress.getByName(entrada);
+                socketProcess = new DatagramSocket(PORT,addressServer);
+                socketAlive = new DatagramSocket(PORT_ALIVE,addressServer);
             }catch(Exception e){
                 System.out.println("Erro no IP");
                 error = true;
@@ -63,13 +65,13 @@ public class Servidor {
                     try {
                         DatagramPacket packet
                                 = new DatagramPacket(buf, buf.length);
-                        socket.receive(packet);
+                                socketProcess.receive(packet);
                         new ServidorThread("PROCESSAR-UDP",packet,this.buf).start();
                     }catch (Exception e){
                         e.printStackTrace();
                     }
                 }
-                socket.close();
+                socketProcess.close();
             }
             else if(this.funcao.equals("ALIVE")){
                 System.out.println("Lista:"+new Gson().toJson(fileByServer));
@@ -84,23 +86,21 @@ public class Servidor {
                         .stream()
                         .forEach(key->{
                             new ServidorThread("SEND-ALIVE",key).start();
-                    });   
+                    }); 
                 }
             }
             else if(this.funcao.equals("SEND-ALIVE")){
-                System.out.println("Alive"+url);
                 byte[] buf = new byte[1024];
                 try{
                     String[] arrayKey = url.split(";",-1);
                     InetAddress address = InetAddress.getByName(arrayKey[0]);
                     byte[] send = new Gson().toJson(new Mensagem("ALIVE")).getBytes();
                     int port = Integer.parseInt(arrayKey[1]);
-                    System.out.println("Enviando alive para "+address.getHostAddress()+":"+port);
                     packet = new DatagramPacket(send, send.length, address, port);
-                    socket.send(packet);
-                    socket.setSoTimeout(10000);
+                    socketAlive.send(packet);
+                    socketAlive.setSoTimeout(10000);
                     packet = new DatagramPacket(buf, buf.length);
-                    socket.receive(packet);
+                    socketAlive.receive(packet);
                     Mensagem mensagem = new Mensagem(packet.getData());
                     if(!mensagem.getAction().equals("ALIVE_OK")){
                         fileByServer.remove(url);
@@ -124,7 +124,6 @@ public class Servidor {
                     Mensagem retorno  = new Mensagem("LEAVE_OK");
                     buf = new Gson().toJson(retorno).getBytes();
                 }else if(mensagem.getAction().equals("SEARCH")){
-                    System.out.println("Search: "+mensagem.getFileName());
                     List<String> listPeers = fileByServer.entrySet()
                         .stream()
                         .filter(item -> item.getValue().contains(mensagem.getFileName()))
@@ -137,7 +136,7 @@ public class Servidor {
                     InetAddress address = packet.getAddress();
                     int port = packet.getPort();
                     packet = new DatagramPacket(buf, buf.length, address, port);
-                    socket.send(packet);
+                    socketProcess.send(packet);
                 }catch (Exception e){
                     e.printStackTrace();
                 }

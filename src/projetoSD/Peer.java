@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.net.*;
 import java.nio.file.*;
 import java.util.*;
-import java.util.Scanner;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -42,17 +41,14 @@ public class Peer  {
                     portUdp = Integer.parseInt(entradaA[3]);
                     peerUrl = Mensagem.buildUrl(ip, portUdp, portsTcp);
                     mensagem.setPeerUrl(peerUrl);
-                    System.out.println("porta: "+portUdp+"add: "+address.getHostAddress());
                     socket = new DatagramSocket(portUdp,address);
                     Mensagem retorno = sendEcho(mensagem);
                     if(retorno.getAction().equals("JOIN_OK")){
-                        System.out.println("Peer conectado com sucesso");
                         new PeerThread("ALIVE",socket).start();
                         portsTcp.stream().forEach(port -> {
                             try{
-                                //System.out.println("Conectando ao porto: " + port);
-                            //ServerSocket serverSocket = new ServerSocket(Integer.parseInt(port));
-                            //new PeerThread("ESCUTAR-TCP",serverSocket).start();
+                                ServerSocket serverSocket = new ServerSocket(Integer.parseInt(port));
+                                new PeerThread("ESCUTAR-TCP",serverSocket).start();
                             }catch(Exception e){
                                 System.out.println("Erro ao criar socket");
                                 e.printStackTrace();
@@ -90,7 +86,7 @@ public class Peer  {
                     String fileName = entrada.substring(entrada.indexOf(" ")+1);
                     mensagem.setAction("SEARCH");
                     mensagem.setFileName(fileName);
-                    System.out.println("Received:"+sendEcho(mensagem));
+                    System.out.println("[SEARCH]Received:"+new Gson().toJson(sendEcho(mensagem)));
                 }catch(ArrayIndexOutOfBoundsException e){
                     System.out.println("Quantidade de Argumentos Inválido");
                 }
@@ -111,7 +107,8 @@ public class Peer  {
             socket.setSoTimeout(5000);
             packet = new DatagramPacket(buf, buf.length);
             socket.receive(packet); 
-            return new Mensagem(packet.getData());
+            Mensagem retorno = new Mensagem(packet.getData());
+            return retorno;
         }catch(Exception e){
             e.printStackTrace();
             return new Mensagem();
@@ -147,25 +144,20 @@ public class Peer  {
             this.serverSocket = serverSocket;
         }
         public PeerThread(String funcao,DatagramSocket socket){
-            System.out.println("Funcao "+ funcao+" Conectado ao porto: "+socket.getLocalPort());
             this.funcao = funcao;
             this.socket = socket;
         }
         public void run(){
             boolean running = true;
             if(this.funcao.equals("ALIVE")){
-                System.out.println("ALIVE");
                 while (running) {
                     try {
                         DatagramPacket packet
                                 = new DatagramPacket(buf, buf.length);
-                        System.out.println("Recebendo...");
                         socket.receive(packet);
-                        Mensagem mensagem = new Mensagem(packet.getData());
-                        System.out.println("Recebido: "+mensagem.getAction());
                         Mensagem retorno = new Mensagem("ALIVE_OK");
                         buf = new Gson().toJson(retorno).getBytes();
-                        packet = new DatagramPacket(buf, buf.length, address, 10098);
+                        packet = new DatagramPacket(buf, buf.length, address, packet.getPort());
                         socket.send(packet);              
                     }catch (Exception e){
                         e.printStackTrace();
@@ -173,8 +165,9 @@ public class Peer  {
                 }
             }
             if(this.funcao.equals("ESCUTAR-TCP")){
+                System.out.println("ESCUTAR-TCP"+serverSocket.getLocalPort());
                 while (running) {
-                    //System.out.println("ESCUTAR-TCP"+serverSocket.getLocalPort());
+                   
                     try {
                         Thread.sleep(3000);
                     } catch (InterruptedException e) {

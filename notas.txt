@@ -1,4 +1,5 @@
-JOIN C:\Users\karen\Documents\Aulas\ufabc-alglin-1q22-nab2sa-aula1 localhost 9000 9090 65520
-JOIN C:\Users\karen\Documents\Aulas\ufabc-alglin-1q22-nab2sa-aula2 localhost 9000 9090 100000
+JOIN C:\Users\karen\Documents\Aulas\ufabc-alglin-1q22-nab2sa-aula1 localhost 9000 9090 9092
+JOIN C:\Users\karen\Documents\Aulas\ufabc-alglin-1q22-nab2sa-aula1 localhost 9001 9092 
+JOIN C:\Users\karen\Documents\Aulas\ufabc-alglin-1q22-nab2sa-aula2 localhost 9002 9090 9091
 
 somente retornar a exception caso porta ocupada

@@ -45,6 +45,7 @@ public class Mensagem {
         this.action = fromJson.getAction();
         this.fileName = fromJson.getFileName();
         this.peerUrl = fromJson.getPeerUrl();
+        this.peerList = fromJson.getPeerList();
     }
     public Mensagem(List<String> peerList){
         this.peerList = peerList;
