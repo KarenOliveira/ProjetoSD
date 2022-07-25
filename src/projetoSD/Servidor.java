@@ -10,8 +10,8 @@ import com.google.gson.Gson;
 public class Servidor {
     
     private  DatagramSocket socket;
-    private int port = 10098;
-    private static final int sleepTime = 3000;
+    private int PORT = 10098;
+    private static final int sleepTime = 20000;
     Map<String, List<String>> fileByServer = new ConcurrentHashMap<>();
     public Servidor(){
         boolean error;
@@ -24,7 +24,7 @@ public class Servidor {
                 System.out.println("Digite IP do Server");
                 entrada = sc.nextLine();
                  addressServer = InetAddress.getByName(entrada);
-                socket = new DatagramSocket(port,addressServer);
+                socket = new DatagramSocket(PORT,addressServer);
             }catch(Exception e){
                 System.out.println("Erro no IP");
                 error = true;
@@ -38,14 +38,12 @@ public class Servidor {
     public static void main(String[] args) {
         new Servidor();
     }
-    class  ServidorThread extends Thread{
 
-       
+    class  ServidorThread extends Thread{
         private String funcao;
         private DatagramPacket packet;
         private String url;
         private byte[] buf = new byte[1024];
-        private Mensagem mensagem;
         public ServidorThread(String funcao){
             this.funcao = funcao;
         }
@@ -74,6 +72,7 @@ public class Servidor {
                 socket.close();
             }
             else if(this.funcao.equals("ALIVE")){
+                System.out.println("Lista:"+new Gson().toJson(fileByServer));
                 while(running){
                     try {
                         Thread.sleep(sleepTime);
@@ -89,22 +88,26 @@ public class Servidor {
                 }
             }
             else if(this.funcao.equals("SEND-ALIVE")){
+                System.out.println("Alive"+url);
                 byte[] buf = new byte[1024];
                 try{
                     String[] arrayKey = url.split(";",-1);
                     InetAddress address = InetAddress.getByName(arrayKey[0]);
                     byte[] send = new Gson().toJson(new Mensagem("ALIVE")).getBytes();
                     int port = Integer.parseInt(arrayKey[1]);
+                    System.out.println("Enviando alive para "+address.getHostAddress()+":"+port);
                     packet = new DatagramPacket(send, send.length, address, port);
                     socket.send(packet);
+                    socket.setSoTimeout(10000);
                     packet = new DatagramPacket(buf, buf.length);
                     socket.receive(packet);
-                    mensagem = new Mensagem(packet.getData());
+                    Mensagem mensagem = new Mensagem(packet.getData());
                     if(!mensagem.getAction().equals("ALIVE_OK")){
                         fileByServer.remove(url);
                     }
                 }catch(Exception e){
                     e.printStackTrace();
+                    fileByServer.remove(url);
                 }
             }
             else if(this.funcao.equals("PROCESSAR-UDP")){

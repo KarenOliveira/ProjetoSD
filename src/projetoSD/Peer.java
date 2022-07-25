@@ -1,18 +1,9 @@
 package projetoSD;
 
 import java.io.IOException;
-import java.net.BindException;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
-import java.net.InetAddress;
-import java.net.SocketException;
-import java.net.UnknownHostException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.net.*;
+import java.nio.file.*;
+import java.util.*;
 import java.util.Scanner;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -21,30 +12,24 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
 public class Peer  {
-    private DatagramSocket socket;
     private InetAddress address;
     private String ip;
+    private int portUdp;
+    private String peerUrl;
     private static Scanner sc = new Scanner(System.in);
 
     public Peer() {
-        try {
-            socket = new DatagramSocket();
-        } catch (Exception e){
-            e.printStackTrace();
-        }
         String entrada;
         Mensagem mensagem = new Mensagem();
         while (true){
             System.out.println("Digite Comando");
             entrada = sc.nextLine();
             if(entrada.startsWith("JOIN")){
+                DatagramSocket socket = null;
                 try{
                     String[] entradaA = entrada.split("\\s+",-1);
                     mensagem.setAction(entradaA[0]);
                     mensagem.setFileList(getFilesListByFolder(entradaA[1]));
-                    mensagem.setPortUdp(entradaA[3]);
-                    ip = entradaA[2];
-                    address = InetAddress.getByName(entradaA[2]);
                     List<String> portsTcp = new ArrayList<>();
                     for(int i = 4;i<entradaA.length;i++){
                         if(!entradaA[i].isEmpty()){
@@ -52,21 +37,45 @@ public class Peer  {
                         }
                     }
                     Collections.sort(portsTcp);
-                    mensagem.setPortTcp(portsTcp);
+                    ip = entradaA[2];
+                    address = InetAddress.getByName(entradaA[2]);
+                    portUdp = Integer.parseInt(entradaA[3]);
+                    peerUrl = Mensagem.buildUrl(ip, portUdp, portsTcp);
+                    mensagem.setPeerUrl(peerUrl);
+                    System.out.println("porta: "+portUdp+"add: "+address.getHostAddress());
+                    socket = new DatagramSocket(portUdp,address);
                     Mensagem retorno = sendEcho(mensagem);
                     if(retorno.getAction().equals("JOIN_OK")){
-                        new PeerThread("ALIVE",mensagem).start();
+                        System.out.println("Peer conectado com sucesso");
+                        new PeerThread("ALIVE",socket).start();
+                        portsTcp.stream().forEach(port -> {
+                            try{
+                                //System.out.println("Conectando ao porto: " + port);
+                            //ServerSocket serverSocket = new ServerSocket(Integer.parseInt(port));
+                            //new PeerThread("ESCUTAR-TCP",serverSocket).start();
+                            }catch(Exception e){
+                                System.out.println("Erro ao criar socket");
+                                e.printStackTrace();
+                            }
+                        });
                     }
-                    
+ 
                 }catch(ArrayIndexOutOfBoundsException e){
                     System.out.println("Quantidade de Argumentos Inválido");
                 } catch (UnknownHostException e) {
                     System.out.println("Servidor ["+ip+"] não encontrado");
-                } catch (IOException e){
+                }catch(BindException e){
+                    System.out.println("Porta ["+portUdp+"] já está em uso");
+                }
+                catch (IOException e){
+                    e.printStackTrace();
                     System.out.println("O Path passado não é válido, favor verificar os Arquivos");
                 } catch (Exception e){
                     System.out.println("Chegou aqui");
-                    e.printStackTrace();
+                }finally{
+                    if(socket != null){
+                        //socket.close();
+                    }
                 }
             }else if(entrada.startsWith("LEAVE")){
                 try{
@@ -88,10 +97,11 @@ public class Peer  {
             }
         }
     }
-
     public Mensagem sendEcho(Mensagem msg) {
         byte[] buf = new byte[1024];
+        DatagramSocket socket = null;
         try{
+            socket = new DatagramSocket();
             Gson gson = new GsonBuilder()
             .setLenient()
             .create();
@@ -105,13 +115,13 @@ public class Peer  {
         }catch(Exception e){
             e.printStackTrace();
             return new Mensagem();
+        }finally
+        {   
+            if(socket != null){
+                socket.close();
+            }
         }
     }
-
-    public void close() {
-        socket.close();
-    }
-
     public static void main(String[] args) {
         new Peer();
     }
@@ -128,40 +138,47 @@ public class Peer  {
     }
     class  PeerThread extends Thread{
         private String funcao;
-        private Mensagem mensagem;
         private byte[] buf = new byte[1024];
+        private DatagramSocket socket;
+        private ServerSocket serverSocket;
 
-
-        public PeerThread(String funcao,Mensagem mensagem){
+        public PeerThread(String funcao,ServerSocket serverSocket){
             this.funcao = funcao;
-            this.mensagem = mensagem;
+            this.serverSocket = serverSocket;
         }
-
+        public PeerThread(String funcao,DatagramSocket socket){
+            System.out.println("Funcao "+ funcao+" Conectado ao porto: "+socket.getLocalPort());
+            this.funcao = funcao;
+            this.socket = socket;
+        }
         public void run(){
             boolean running = true;
             if(this.funcao.equals("ALIVE")){
-                try {
-                    socket = new DatagramSocket(Integer.parseInt(mensagem.getPortUdp()),address);
-                } catch (NumberFormatException e) {
-                    e.printStackTrace();
-                
-                } catch (BindException e){
-                    e.printStackTrace();
-                    throw new RuntimeException(e);
-                }
-                catch (SocketException e){
-                    e.printStackTrace();
-                }
+                System.out.println("ALIVE");
                 while (running) {
                     try {
                         DatagramPacket packet
                                 = new DatagramPacket(buf, buf.length);
+                        System.out.println("Recebendo...");
                         socket.receive(packet);
+                        Mensagem mensagem = new Mensagem(packet.getData());
+                        System.out.println("Recebido: "+mensagem.getAction());
                         Mensagem retorno = new Mensagem("ALIVE_OK");
                         buf = new Gson().toJson(retorno).getBytes();
                         packet = new DatagramPacket(buf, buf.length, address, 10098);
                         socket.send(packet);              
                     }catch (Exception e){
+                        e.printStackTrace();
+                    }
+                }
+            }
+            if(this.funcao.equals("ESCUTAR-TCP")){
+                while (running) {
+                    //System.out.println("ESCUTAR-TCP"+serverSocket.getLocalPort());
+                    try {
+                        Thread.sleep(3000);
+                    } catch (InterruptedException e) {
+                        // TODO Auto-generated catch block
                         e.printStackTrace();
                     }
                 }

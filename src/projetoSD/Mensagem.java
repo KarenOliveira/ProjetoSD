@@ -7,12 +7,21 @@ import com.google.gson.Gson;
 import com.google.gson.stream.JsonReader;
 public class Mensagem {
     private List<String> fileList;
-    private String portUdp;
-    private List<String> portsTcp;
     private String content;
     private String action;
     private String fileName;
     private List<String> peerList;
+    private String peerUrl;
+
+
+    public String getPeerUrl() {
+        return this.peerUrl;
+    }
+
+    public void setPeerUrl(String peerUrl) {
+        this.peerUrl = peerUrl;
+    }
+    
     public List<String> getPeerList() {
         return peerList;
     }
@@ -32,41 +41,22 @@ public class Mensagem {
         reader.setLenient(true);
         Mensagem fromJson = new Gson().fromJson(reader, Mensagem.class);
         this.fileList = fromJson.getFileList();
-        this.portUdp = fromJson.getPortUdp();
         this.content = fromJson.getContent();
         this.action = fromJson.getAction();
-        this.portsTcp = fromJson.getPortsTcp();
         this.fileName = fromJson.getFileName();
+        this.peerUrl = fromJson.getPeerUrl();
     }
     public Mensagem(List<String> peerList){
         this.peerList = peerList;
     }
-    public Mensagem(List<String> fileList, String portUdp,List<String> portsTcp, String content, String action) {
+    public Mensagem(List<String> fileList, String content, String action) {
         this.fileList = fileList;
-        this.portUdp = portUdp;
         this.content = content;
         this.action = action;
-        this.portsTcp = portsTcp;
     }
 
     public Mensagem(String action){
         this.action = action;
-    }
-
-    public List<String> getPortsTcp() {
-        return this.portsTcp;
-    }
-
-    public void setPortTcp(List<String> portsTcp) {
-        this.portsTcp = portsTcp;
-    }
-
-    public String getPortUdp() {
-        return this.portUdp;
-    }
-
-    public void setPortUdp(String portUdp) {
-        this.portUdp = portUdp;
     }
 
     public String getContent() {
@@ -92,13 +82,36 @@ public class Mensagem {
     public void setFileList(List<String> fileList) {
         this.fileList = fileList;
     }
-    public String buildUrl(String ip, Mensagem mensagem){
+    public static String buildUrl(String ip, String portUdp, List<String> portTcp){
         StringBuilder sb = new StringBuilder();
         sb.append(ip);
         sb.append(";");
-        sb.append(mensagem.getPortUdp());
+        sb.append(portUdp);
         sb.append(";");
-        sb.append(String.join(":", mensagem.getPortsTcp()));
+        sb.append(String.join(":", portTcp));
+        return sb.toString();
+    }
+    public static String buildUrl(String ip, int portUdp, List<String> portTcp){
+        StringBuilder sb = new StringBuilder();
+        sb.append(ip);
+        sb.append(";");
+        sb.append(portUdp);
+        sb.append(";");
+        sb.append(String.join(":", portTcp));
+        return sb.toString();
+    }
+    public String buildUrl(String ip, Mensagem mensagem){
+        StringBuilder sb = new StringBuilder();
+        String[] split = mensagem.getPeerUrl().split(";");
+        sb.append(ip);
+        sb.append(";");
+        sb.append(split[1]);
+        sb.append(";");
+        for(int i = 2; i < split.length; i++){
+            sb.append(split[i]);
+            if(i != split.length - 1)
+                sb.append(":");
+        }
         return sb.toString();
     }
 
