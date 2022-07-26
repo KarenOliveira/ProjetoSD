@@ -1,5 +1,22 @@
 JOIN C:\Users\karen\Documents\Aulas\ufabc-alglin-1q22-nab2sa-aula1 localhost 9000 9090 9092
 JOIN C:\Users\karen\Documents\Aulas\ufabc-alglin-1q22-nab2sa-aula1 localhost 9001 9092 
-JOIN C:\Users\karen\Documents\Aulas\ufabc-alglin-1q22-nab2sa-aula2 localhost 9002 9090 9091
+JOIN C:\Users\karen\Documents\Aulas\ufabc-alglin-1q22-nab2sa-aula2 localhost 9002 9093 9091
+SEARCH MCTB001 - NAB2SA - 1q22 - Aula 1.mp4
 
 somente retornar a exception caso porta ocupada
+
+ System.out.println("ESCUTAR-TCP"+serverSocket.getLocalPort());
+                Socket clientSocket;
+                PrintWriter out;
+                BufferedReader in;
+                try {
+                    clientSocket = serverSocket.accept();
+                    out = new PrintWriter(clientSocket.getOutputStream(), true);
+                    in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+                    String greeting = in.readLine();
+                    System.out.println("Received: " + greeting);
+                    out.println("hello client");
+                } catch (Exception e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
+                }

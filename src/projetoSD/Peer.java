@@ -1,6 +1,6 @@
 package projetoSD;
 
-import java.io.IOException;
+import java.io.*;
 import java.net.*;
 import java.nio.file.*;
 import java.util.*;
@@ -15,6 +15,7 @@ public class Peer  {
     private String ip;
     private int portUdp;
     private String peerUrl;
+    private String path;
     private static Scanner sc = new Scanner(System.in);
 
     public Peer() {
@@ -40,6 +41,7 @@ public class Peer  {
                     address = InetAddress.getByName(entradaA[2]);
                     portUdp = Integer.parseInt(entradaA[3]);
                     peerUrl = Mensagem.buildUrl(ip, portUdp, portsTcp);
+                    path = entradaA[1];
                     mensagem.setPeerUrl(peerUrl);
                     socket = new DatagramSocket(portUdp,address);
                     Mensagem retorno = sendEcho(mensagem);
@@ -49,36 +51,30 @@ public class Peer  {
                             try{
                                 ServerSocket serverSocket = new ServerSocket(Integer.parseInt(port));
                                 new PeerThread("ESCUTAR-TCP",serverSocket).start();
-                            }catch(Exception e){
+                            }catch(final Exception e){
                                 System.out.println("Erro ao criar socket");
                                 e.printStackTrace();
                             }
                         });
                     }
  
-                }catch(ArrayIndexOutOfBoundsException e){
+                }catch(final ArrayIndexOutOfBoundsException e){
                     System.out.println("Quantidade de Argumentos Inválido");
                 } catch (UnknownHostException e) {
                     System.out.println("Servidor ["+ip+"] não encontrado");
-                }catch(BindException e){
+                }catch(final BindException e){
                     System.out.println("Porta ["+portUdp+"] já está em uso");
-                }
-                catch (IOException e){
-                    e.printStackTrace();
+                } catch (final IOException e){
                     System.out.println("O Path passado não é válido, favor verificar os Arquivos");
                 } catch (Exception e){
                     System.out.println("Chegou aqui");
-                }finally{
-                    if(socket != null){
-                        //socket.close();
-                    }
                 }
             }else if(entrada.startsWith("LEAVE")){
                 try{
                     String[] entradaA = entrada.split("\\s+",-1);
                     mensagem.setAction(entradaA[0]);
                     System.out.println("Received:"+sendEcho(mensagem));
-                }catch(ArrayIndexOutOfBoundsException e){
+                }catch(final ArrayIndexOutOfBoundsException e){
                     System.out.println("Quantidade de Argumentos Inválido");
                 }
             }else if(entrada.startsWith("SEARCH")){
@@ -86,8 +82,35 @@ public class Peer  {
                     String fileName = entrada.substring(entrada.indexOf(" ")+1);
                     mensagem.setAction("SEARCH");
                     mensagem.setFileName(fileName);
-                    System.out.println("[SEARCH]Received:"+new Gson().toJson(sendEcho(mensagem)));
-                }catch(ArrayIndexOutOfBoundsException e){
+                   Mensagem listaPeers = sendEcho(mensagem);
+                   Socket socket = null;
+                    for(String peer: listaPeers.getPeerList()){
+                        System.out.println("Tentando conectar ao peer: "+peer);
+                        if(socket!=null){
+                            break;
+                        }
+                        String ip = peer.split(";",-1)[0];
+                        String portTcp = peer.split(";",-1)[2];
+                        String[] tcpArray = portTcp.split(":",-1);
+                        for(int i = 0;i<tcpArray.length;i++){
+                            if(socket!=null){
+                                break;
+                            }
+                            if(!tcpArray[i].isEmpty()){
+                                try{
+                                    System.out.println("Tentando conectar ao peer: "+ip+ " na porta: "+tcpArray[i]);
+                                    socket = new Socket(InetAddress.getByName(ip), Integer.parseInt(tcpArray[i]));
+                                }catch(final Exception e){
+                                    System.out.println("Erro ao criar socket");
+                                    e.printStackTrace();
+                                }
+                            }
+                        }
+                    }
+                    if(socket!=null){
+                        new PeerThread("SEND-DOWNLOAD",socket,fileName).start();
+                    }
+                }catch(final ArrayIndexOutOfBoundsException e){
                     System.out.println("Quantidade de Argumentos Inválido");
                 }
             }
@@ -109,7 +132,7 @@ public class Peer  {
             socket.receive(packet); 
             Mensagem retorno = new Mensagem(packet.getData());
             return retorno;
-        }catch(Exception e){
+        }catch(final Exception e){
             e.printStackTrace();
             return new Mensagem();
         }finally
@@ -136,16 +159,23 @@ public class Peer  {
     class  PeerThread extends Thread{
         private String funcao;
         private byte[] buf = new byte[1024];
-        private DatagramSocket socket;
+        private DatagramSocket datagramSocket;
         private ServerSocket serverSocket;
+        private Socket socket;
+        private String fileName;
 
         public PeerThread(String funcao,ServerSocket serverSocket){
             this.funcao = funcao;
             this.serverSocket = serverSocket;
         }
-        public PeerThread(String funcao,DatagramSocket socket){
+        public PeerThread(String funcao,DatagramSocket datagramSocket){
+            this.funcao = funcao;
+            this.datagramSocket = datagramSocket;
+        }
+        public PeerThread(String funcao,Socket socket,String fileName){
             this.funcao = funcao;
             this.socket = socket;
+            this.fileName = fileName;
         }
         public void run(){
             boolean running = true;
@@ -154,26 +184,65 @@ public class Peer  {
                     try {
                         DatagramPacket packet
                                 = new DatagramPacket(buf, buf.length);
-                        socket.receive(packet);
+                                datagramSocket.receive(packet);
                         Mensagem retorno = new Mensagem("ALIVE_OK");
                         buf = new Gson().toJson(retorno).getBytes();
                         packet = new DatagramPacket(buf, buf.length, address, packet.getPort());
-                        socket.send(packet);              
+                        datagramSocket.send(packet);              
                     }catch (Exception e){
                         e.printStackTrace();
                     }
                 }
             }
             if(this.funcao.equals("ESCUTAR-TCP")){
-                System.out.println("ESCUTAR-TCP"+serverSocket.getLocalPort());
-                while (running) {
-                   
-                    try {
-                        Thread.sleep(3000);
-                    } catch (InterruptedException e) {
-                        // TODO Auto-generated catch block
-                        e.printStackTrace();
+                try{
+                    //Initialize Sockets
+                    Socket socket = serverSocket.accept();
+                    //The InetAddress specification
+                    //Specify the file
+                    File file = new File("E:\\Bookmarks.txt");
+                    FileInputStream fis = new FileInputStream(file);
+                    BufferedInputStream bis = new BufferedInputStream(fis);
+                    //Get socket's output stream
+                    OutputStream os = socket.getOutputStream();
+                    //Read File Contents into contents array
+                    byte[] contents;
+                    long fileLength = file.length();
+                    long current = 0;
+                    while(current!=fileLength){
+                    int size = 10000;
+                    if(fileLength - current >= size)
+                    current += size;
+                    else{
+                    size = (int)(fileLength - current);
+                    current = fileLength;
                     }
+                    contents = new byte[size];
+                    bis.read(contents, 0, size);
+                    os.write(contents);
+                    System.out.print("Sending file ... "+(current*100)/fileLength+"% complete!");
+                    }
+                    os.flush();
+                    //File transfer done. Close the socket connection!
+                    socket.close();
+                    serverSocket.close();
+                    System.out.println("File sent succesfully!");
+                }catch (Exception e){
+                    e.printStackTrace();
+                }
+            }
+            if(this.funcao.equals("SEND-DOWNLOAD")){
+                System.out.println("Download");
+                try{
+                    String dado = "DOWNLOAD "+fileName;
+                    ByteArrayOutputStream bos = new ByteArrayOutputStream();
+                    //No of bytes read in one read() call
+                    bos.write(dado.getBytes());
+                    bos.flush();
+                    socket.close();
+                    System.out.println("File saved successfully!");
+                } catch(Exception e){
+                    e.printStackTrace();
                 }
             }
         }

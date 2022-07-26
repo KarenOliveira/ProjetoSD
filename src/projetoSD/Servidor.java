@@ -27,7 +27,7 @@ public class Servidor {
                 addressServer = InetAddress.getByName(entrada);
                 socketProcess = new DatagramSocket(PORT,addressServer);
                 socketAlive = new DatagramSocket(PORT_ALIVE,addressServer);
-            }catch(Exception e){
+            }catch(final Exception e){
                 System.out.println("Erro no IP");
                 error = true;
             }
@@ -105,7 +105,7 @@ public class Servidor {
                     if(!mensagem.getAction().equals("ALIVE_OK")){
                         fileByServer.remove(url);
                     }
-                }catch(Exception e){
+                }catch(final Exception e){
                     e.printStackTrace();
                     fileByServer.remove(url);
                 }
