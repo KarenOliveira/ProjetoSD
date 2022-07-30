@@ -7,12 +7,10 @@ import com.google.gson.Gson;
 import com.google.gson.stream.JsonReader;
 public class Mensagem {
     private List<String> fileList;
-    private String content;
     private String action;
     private String fileName;
     private List<String> peerList;
     private String peerUrl;
-
 
     public String getPeerUrl() {
         return this.peerUrl;
@@ -41,7 +39,6 @@ public class Mensagem {
         reader.setLenient(true);
         Mensagem fromJson = new Gson().fromJson(reader, Mensagem.class);
         this.fileList = fromJson.getFileList();
-        this.content = fromJson.getContent();
         this.action = fromJson.getAction();
         this.fileName = fromJson.getFileName();
         this.peerUrl = fromJson.getPeerUrl();
@@ -52,7 +49,6 @@ public class Mensagem {
     }
     public Mensagem(List<String> fileList, String content, String action) {
         this.fileList = fileList;
-        this.content = content;
         this.action = action;
     }
 
@@ -60,12 +56,9 @@ public class Mensagem {
         this.action = action;
     }
 
-    public String getContent() {
-        return this.content;
-    }
-
-    public void setContent(String content) {
-        this.content = content;
+    public Mensagem(String action, String fileName) {
+        this.action = action;
+        this.fileName = fileName;
     }
 
     public String getAction() {
