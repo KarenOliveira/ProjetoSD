@@ -10,7 +10,6 @@ public class Servidor {
     ///TODO DELETE THIS
     private static String SERVER_IP = "localhost";
 
-
     private DatagramSocket socketProcess;
     private DatagramSocket socketAlive;
     private int PORT = 10098;
@@ -119,13 +118,13 @@ public class Servidor {
             } else if (this.funcao.equals("PROCESSAR-UDP")) {
                 Mensagem mensagem = new Mensagem(buf);
                 if (mensagem.getAction().equals("JOIN")) {
-                    String peerString = mensagem.buildUrl(packet.getAddress().getHostAddress(), mensagem);
+                    String peerString = Mensagem.buildUrl(packet.getAddress().getHostAddress(), mensagem);
                     fileByServer.put(peerString, mensagem.getFileList());
                     System.out.println("Lista:" + new Gson().toJson(fileByServer));
                     Mensagem retorno = new Mensagem("JOIN_OK");
                     buf = new Gson().toJson(retorno).getBytes();
                 } else if (mensagem.getAction().equals("LEAVE")) {
-                    String peerString = mensagem.buildUrl(packet.getAddress().getHostAddress(), mensagem);
+                    String peerString = Mensagem.buildUrl(packet.getAddress().getHostAddress(), mensagem);
                     fileByServer.remove(peerString);
                     Mensagem retorno = new Mensagem("LEAVE_OK");
                     buf = new Gson().toJson(retorno).getBytes();
@@ -136,6 +135,17 @@ public class Servidor {
                             .map(map -> map.getKey())
                             .collect(Collectors.toList());
                     Mensagem retorno = new Mensagem(listPeers);
+                    buf = new Gson().toJson(retorno).getBytes();
+                } else if(mensagem.getAction().equals("UPDATE")){
+                    System.out.println("UPDATE"+mensagem.toString());
+                    List<String> fileList = fileByServer.get(mensagem.getPeerUrl());
+                    if(fileList == null){
+                        fileList = new ArrayList<>();
+                    }
+                    fileList.add(mensagem.getFileName());
+                    fileByServer.put(Mensagem.buildUrl(packet.getAddress().getHostAddress(), mensagem), fileList);
+                    System.out.println("Lista:" + new Gson().toJson(fileByServer));
+                    Mensagem retorno = new Mensagem("UPDATE_OK");
                     buf = new Gson().toJson(retorno).getBytes();
                 }
                 try {

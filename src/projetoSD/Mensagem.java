@@ -47,7 +47,7 @@ public class Mensagem {
     public Mensagem(List<String> peerList){
         this.peerList = peerList;
     }
-    public Mensagem(List<String> fileList, String content, String action) {
+    public Mensagem(List<String> fileList,  String action) {
         this.fileList = fileList;
         this.action = action;
     }
@@ -59,6 +59,11 @@ public class Mensagem {
     public Mensagem(String action, String fileName) {
         this.action = action;
         this.fileName = fileName;
+    }
+    public Mensagem(String action, String fileName,String peerUrl) {
+        this.action = action;
+        this.fileName = fileName;
+        this.peerUrl  = peerUrl;
     }
 
     public String getAction() {
@@ -94,7 +99,7 @@ public class Mensagem {
         sb.append(String.join(":", portTcp));
         return sb.toString();
     }
-    public String buildUrl(String ip, Mensagem mensagem){
+    public static String buildUrl(String ip, Mensagem mensagem){
         StringBuilder sb = new StringBuilder();
         String[] split = mensagem.getPeerUrl().split(";");
         sb.append(ip);
@@ -108,5 +113,17 @@ public class Mensagem {
         }
         return sb.toString();
     }
+
+    @Override
+    public String toString() {
+        return "{" +
+            " fileList='" + getFileList() + "'" +
+            ", action='" + getAction() + "'" +
+            ", fileName='" + getFileName() + "'" +
+            ", peerList='" + getPeerList() + "'" +
+            ", peerUrl='" + getPeerUrl() + "'" +
+            "}";
+    }
+
 
 }

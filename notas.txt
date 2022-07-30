@@ -1,7 +1,9 @@
-JOIN C:\Users\karen\Documents\peer1 localhost 9001 9091
+JOIN C:\Users\karen\Documents\peer1 localhost 9001 9091 9094
 JOIN C:\Users\karen\Documents\peer2 localhost 9002 9092
 JOIN C:\Users\karen\Documents\peer3 localhost 9003 9093
 SEARCH MCTB001 - NAB2SA - 1q22 - Aula 1.mp4
-DOWNLOAD localhost 9091 peer1-teste.txt
+DOWNLOAD localhost 9091 MCTB001 - NAB2SA - 1q22 - Aula 2.mp4
+DOWNLOAD localhost 9094 MCTB001 - NAB2SA - 1q22 - Aula 2.mp4
+
 DOWNLOAD localhost 9091 peer2-teste.txt
 DOWNLOAD localhost 9091 peer1-teste.txt

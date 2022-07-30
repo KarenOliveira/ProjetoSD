@@ -3,6 +3,7 @@ package projetoSD;
 import java.io.*;
 import java.net.*;
 import java.nio.file.*;
+import java.security.MessageDigest;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -96,8 +97,7 @@ public class Peer {
                 String ip = entradaA[1];
                 String port = entradaA[2];
                 String fileName = entrada.substring(entrada.indexOf(port) + port.length() + 1);
-                //TODO DELETE THIS LINE
-                if (fileList.contains(fileName)&&false) {
+                if (fileList.contains(fileName)) {
                     System.out.println("Arquivo já existe no Peer");
                 } else {
                     try {
@@ -176,6 +176,10 @@ public class Peer {
             this.fileName = fileName;
             this.socket = socket;
         }
+        public PeerThread(String funcao, String fileName) {
+            this.funcao = funcao;
+            this.fileName = fileName;
+        }
 
         public void run() {
             boolean running = true;
@@ -211,7 +215,14 @@ public class Peer {
                             Mensagem retorno = new Mensagem("DOWNLOAD_NEGADO");
                             dataOutputStream.writeUTF(new Gson().toJson(retorno));
                         }else{
-                            sendFile(path+"\\"+mensagem.getFileName(), dataOutputStream);
+                            int random = (int)Math.floor(Math.random()*(9-0+1)+0);
+                            System.out.println("Random: " + random);
+                            if(random%2==0){
+                                sendFile(path+"\\"+mensagem.getFileName(), dataOutputStream);
+                            }else{
+                                Mensagem retorno = new Mensagem("DOWNLOAD_NEGADO");
+                                dataOutputStream.writeUTF(new Gson().toJson(retorno));
+                            }
                         }
                         dataInputStream.close();
                         dataOutputStream.close();
@@ -231,8 +242,10 @@ public class Peer {
                     Mensagem mensagem = new Mensagem("DOWNLOAD", fileName);
                     dataOutputStream.writeUTF(new Gson().toJson(mensagem));
                     boolean isDownloadOk = false;
+                    String retorno = "";
                     try{
-                        String retorno = dataInputStream.readUTF();
+                        retorno = dataInputStream.readUTF();
+                        System.out.println("Retorno: " + retorno);
                         Mensagem mensagemRetorno = new Gson().fromJson(retorno, Mensagem.class);
                         if(mensagemRetorno.getAction().equals("DOWNLOAD_NEGADO")){
                             isDownloadOk = false;
@@ -240,8 +253,19 @@ public class Peer {
                     } catch (Exception e){
                         isDownloadOk = true;
                     }
+                    System.out.println("Download Ok: " + isDownloadOk);
                     if(isDownloadOk){
-                        receiveFile(path+"\\"+fileName, dataInputStream);
+                        String newFile = path+"\\"+fileName;
+                        receiveFile(newFile, dataInputStream);
+                        File file = new File(newFile); 
+                        MessageDigest md5Digest = MessageDigest.getInstance("MD5");
+                        String hashNewFile = getFileChecksum(md5Digest, file);
+                        if(retorno.equals(hashNewFile)){
+                            System.out.println("Arquivo baixado com sucesso");
+                            new PeerThread("UPDATE", fileName).start();
+                        }else{
+                            System.out.println("Arquivo baixado com erro");
+                        }
                     }
                     dataInputStream.close();
                     dataInputStream.close();
@@ -249,6 +273,12 @@ public class Peer {
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
+            }else if (this.funcao.equals("UPDATE")){
+                    System.out.println("Send Update for File: "+fileName);
+                    Mensagem mensagem = new Mensagem("UPDATE", fileName,peerUrl);
+                    System.out.println(mensagem.toString());
+                    Mensagem mensagemUpdate = sendEcho(mensagem);
+                    System.out.println("Update: "+mensagemUpdate.toString());
             }
         }
     }
@@ -257,7 +287,7 @@ public class Peer {
         File file = new File(fileName); //initialize File object and passing path as argument  
         file.createNewFile();
         FileOutputStream fileOutputStream = new FileOutputStream(fileName);
-        
+
         long size = dataInputStream.readLong();     // read file size
         byte[] buffer = new byte[4*1024];
         while (size > 0 && (bytes = dataInputStream.read(buffer, 0, (int)Math.min(buffer.length, size))) != -1) {
@@ -271,6 +301,13 @@ public class Peer {
         File file = new File(path);
         FileInputStream fileInputStream = new FileInputStream(file);
         
+        //send file hash
+        MessageDigest md5Digest = MessageDigest.getInstance("MD5");
+        String hash = getFileChecksum(md5Digest, file);
+        System.out.println("Hash sent: " + hash);
+
+        dataOutputStream.writeUTF(hash);
+
         // send file size
         dataOutputStream.writeLong(file.length());  
         // break file into chunks
@@ -280,5 +317,36 @@ public class Peer {
             dataOutputStream.flush();
         }
         fileInputStream.close();
+    }
+    private static String getFileChecksum(MessageDigest digest, File file) throws IOException
+    {
+        //Get file input stream for reading the file content
+        FileInputStream fis = new FileInputStream(file);
+        
+        //Create byte array to read data in chunks
+        byte[] byteArray = new byte[1024];
+        int bytesCount = 0; 
+            
+        //Read file data and update in message digest
+        while ((bytesCount = fis.read(byteArray)) != -1) {
+            digest.update(byteArray, 0, bytesCount);
+        };
+        
+        //close the stream; We don't need it now.
+        fis.close();
+        
+        //Get the hash's bytes
+        byte[] bytes = digest.digest();
+        
+        //This bytes[] has bytes in decimal format;
+        //Convert it to hexadecimal format
+        StringBuilder sb = new StringBuilder();
+        for(int i=0; i< bytes.length ;i++)
+        {
+            sb.append(Integer.toString((bytes[i] & 0xff) + 0x100, 16).substring(1));
+        }
+        
+        //return complete hash
+        return sb.toString();
     }
 }
