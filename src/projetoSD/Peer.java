@@ -103,7 +103,7 @@ public class Peer {
                 //if (fileByIpByResultDownload.containsKey(fileName)){
                     //System.out.println("Esse arquivo está sendo procurado em outros peers");
                 //}
-                else {
+                //else {
                     Socket socket = null;
                     try {
                         socket = new Socket(ip, Integer.parseInt(port));
@@ -112,7 +112,7 @@ public class Peer {
                         System.out.println("Erro ao criar socket: " + socket);
                         e.printStackTrace();
                     }
-                }
+                //}
             }
         }
     }
