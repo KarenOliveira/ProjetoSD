@@ -7,7 +7,6 @@ import java.util.stream.Collectors;
 import com.google.gson.Gson;
 
 public class Servidor {
-    /// TODO DELETE THIS
     private DatagramSocket socketProcess;
     private DatagramSocket socketAlive;
     private int PORT = 10098;
@@ -24,7 +23,6 @@ public class Servidor {
             error = false;
             try {
                 System.out.println("Digite IP do Server");
-                // TODO UNCOMMMENT THIS
                 entrada = sc.nextLine();
                 addressServer = InetAddress.getByName(entrada);
                 socketProcess = new DatagramSocket(PORT, addressServer);
@@ -84,7 +82,6 @@ public class Servidor {
                     try {
                         Thread.sleep(sleepTime);
                     } catch (InterruptedException e) {
-                        // TODO Auto-generated catch block
                         e.printStackTrace();
                     }
                     fileByServer.keySet()
@@ -107,10 +104,11 @@ public class Servidor {
                     socketAlive.receive(packet);
                     Mensagem mensagem = new Mensagem(packet.getData());
                     if (!mensagem.getAction().equals("ALIVE_OK")) {
+                        System.out.println("Peer " + url + " morto. Eliminando seus arquivos ["+String.join(";", fileByServer.get(url))+"]");
                         fileByServer.remove(url);
                     }
                 } catch (final Exception e) {
-                    e.printStackTrace();
+                    System.out.println("Peer " + url + " morto. Eliminando seus arquivos ["+String.join(";", fileByServer.get(url))+"]");
                     fileByServer.remove(url);
                 }
             } else if (this.funcao.equals("PROCESSAR-UDP")) {
@@ -118,15 +116,16 @@ public class Servidor {
                 if (mensagem.getAction().equals("JOIN")) {
                     String peerString = Mensagem.buildUrl(packet.getAddress().getHostAddress(), mensagem);
                     fileByServer.put(peerString, mensagem.getFileList());
-                    System.out.println("Lista:" + new Gson().toJson(fileByServer));
                     Mensagem retorno = new Mensagem("JOIN_OK");
                     buf = new Gson().toJson(retorno).getBytes();
+                    System.out.println("Peer " + peerString + " adicionado com arquivos: " + String.join(",", mensagem.getFileList()));
                 } else if (mensagem.getAction().equals("LEAVE")) {
                     String peerString = Mensagem.buildUrl(packet.getAddress().getHostAddress(), mensagem);
                     fileByServer.remove(peerString);
                     Mensagem retorno = new Mensagem("LEAVE_OK");
                     buf = new Gson().toJson(retorno).getBytes();
                 } else if (mensagem.getAction().equals("SEARCH")) {
+                    System.out.println("Peer: "+mensagem.getPeerUrl()+" solicitou arquivo: ["+mensagem.getFileName()+"]");
                     List<String> listPeers = fileByServer.entrySet()
                             .stream()
                             .filter(item -> item.getValue().contains(mensagem.getFileName()))
@@ -135,7 +134,6 @@ public class Servidor {
                     Mensagem retorno = new Mensagem(listPeers);
                     buf = new Gson().toJson(retorno).getBytes();
                 } else if (mensagem.getAction().equals("UPDATE")) {
-                    System.out.println("UPDATE" + mensagem.toString());
                     List<String> fileList = fileByServer.get(mensagem.getPeerUrl());
                     if (fileList == null) {
                         fileList = new ArrayList<>();

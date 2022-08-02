@@ -5,7 +5,6 @@ import java.net.*;
 import java.nio.file.*;
 import java.security.MessageDigest;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -18,7 +17,6 @@ public class Peer {
     private int portUdp;
     private String peerUrl;
     private List<String> fileList;
-    private Map<String, Map<String, String>> fileByIpByResultDownload = new ConcurrentHashMap<>();
     private String path;
     private static Scanner sc = new Scanner(System.in);
 
@@ -26,7 +24,7 @@ public class Peer {
         String entrada;
         Mensagem mensagem = new Mensagem();
         while (true) {
-            System.out.println("Digite Comando");
+            System.out.println("Digite Comando:");
             entrada = sc.nextLine();
             if (entrada.startsWith("JOIN")) {
                 DatagramSocket socket = null;
@@ -54,7 +52,6 @@ public class Peer {
                         new PeerThread("ALIVE", socket).start();
                         portsTcp.stream().forEach(port -> {
                             try {
-                                System.out.println("ABERTA CONEXAO TCP PARA " + port);
                                 ServerSocket serverSocket = new ServerSocket(Integer.parseInt(port));
                                 new PeerThread("ESCUTAR-TCP", serverSocket).start();
                             } catch (final Exception e) {
@@ -62,6 +59,7 @@ public class Peer {
                                 e.printStackTrace();
                             }
                         });
+                        System.out.println("Sou Peer ["+ip+"]["+portUdp+"] com arquivos: [" + String.join(",", fileList)+"]");
                     }
 
                 } catch (final ArrayIndexOutOfBoundsException e) {
@@ -79,7 +77,7 @@ public class Peer {
                 try {
                     String[] entradaA = entrada.split("\\s+", -1);
                     mensagem.setAction(entradaA[0]);
-                    System.out.println("Received:" + sendEcho(mensagem));
+                    sendEcho(mensagem);
                 } catch (final ArrayIndexOutOfBoundsException e) {
                     System.out.println("Quantidade de Argumentos Inválido");
                 }
@@ -88,9 +86,10 @@ public class Peer {
                     String fileName = entrada.substring(entrada.indexOf(" ") + 1);
                     mensagem.setAction("SEARCH");
                     mensagem.setFileName(fileName);
+                    mensagem.setPeerUrl(peerUrl);
                     Mensagem listaPeers = sendEcho(mensagem);
-                    System.out.println("Received:" + listaPeers.getPeerList());
-
+                    List<String> peers = listaPeers.getPeerList();
+                    System.out.println("Peers com o arquivo: " + fileName + " " + String.join(",", peers));
                 } catch (final ArrayIndexOutOfBoundsException e) {
                     System.out.println("Quantidade de Argumentos Inválido");
                 }
@@ -98,21 +97,15 @@ public class Peer {
                 String[] entradaA = entrada.split("\\s+", -1);
                 String ip = entradaA[1];
                 String port = entradaA[2];
-                //String autoSearch = entradaA[3];
                 String fileName = entrada.substring(entrada.indexOf(port) + port.length() + 1);
-                //if (fileByIpByResultDownload.containsKey(fileName)){
-                    //System.out.println("Esse arquivo está sendo procurado em outros peers");
-                //}
-                //else {
-                    Socket socket = null;
-                    try {
-                        socket = new Socket(ip, Integer.parseInt(port));
-                        new PeerThread("REQUEST-DOWNLOAD", fileName, socket).start();
-                    } catch (Exception e) {
-                        System.out.println("Erro ao criar socket: " + socket);
-                        e.printStackTrace();
-                    }
-                //}
+                Socket socket = null;
+                try {
+                    socket = new Socket(ip, Integer.parseInt(port));
+                    new PeerThread("REQUEST-DOWNLOAD", fileName, socket,"["+ip+"]:["+port+"]").start();
+                } catch (Exception e) {
+                    System.out.println("Peer ["+ip+"]["+port+"] negou  o download");
+                }
+                
             }
         }
     }
@@ -166,6 +159,7 @@ public class Peer {
         private ServerSocket serverSocket;
         private Socket socket;
         private String fileName;
+        private String ipPort;
 
         public PeerThread(String funcao, DatagramSocket datagramSocket) {
             this.funcao = funcao;
@@ -177,10 +171,11 @@ public class Peer {
             this.serverSocket = serverSocket;
         }
 
-        public PeerThread(String funcao, String fileName, Socket socket) {
+        public PeerThread(String funcao, String fileName, Socket socket,String ipPort) {
             this.funcao = funcao;
             this.fileName = fileName;
             this.socket = socket;
+            this.ipPort = ipPort;
         }
 
         public PeerThread(String funcao, String fileName) {
@@ -214,16 +209,12 @@ public class Peer {
                         dataInputStream = new DataInputStream(clientSocket.getInputStream());
                         dataOutputStream = new DataOutputStream(clientSocket.getOutputStream());
                         receivedData = dataInputStream.readUTF();
-                        System.out.println("Received: " + receivedData);
                         Mensagem mensagem = new Gson().fromJson(receivedData, Mensagem.class);
-                        System.out.println("Request File: " + mensagem.getFileName());
                         if (!fileList.contains(mensagem.getFileName())) {
-                            System.out.println("Arquivo não existe no Peer");
                             Mensagem retorno = new Mensagem("DOWNLOAD_NEGADO");
                             dataOutputStream.writeUTF(new Gson().toJson(retorno));
                         } else {
                             int random = (int) Math.floor(Math.random() * (9 - 0 + 1) + 0);
-                            System.out.println("Random: " + random);
                             if (random % 2 == 0) {
                                 sendFile(path + "\\" + mensagem.getFileName(), dataOutputStream);
                             } else {
@@ -252,15 +243,14 @@ public class Peer {
                     String retorno = "";
                     try {
                         retorno = dataInputStream.readUTF();
-                        System.out.println("Retorno: " + retorno);
                         Mensagem mensagemRetorno = new Gson().fromJson(retorno, Mensagem.class);
                         if (mensagemRetorno.getAction().equals("DOWNLOAD_NEGADO")) {
+                            System.out.println("Peer ["+ipPort+"] negou  o download");
                             isDownloadOk = false;
                         }
                     } catch (Exception e) {
                         isDownloadOk = true;
                     }
-                    System.out.println("Download Ok: " + isDownloadOk);
                     if (isDownloadOk) {
                         String newFile = path + "\\" + fileName;
                         receiveFile(newFile, dataInputStream);
@@ -268,24 +258,23 @@ public class Peer {
                         MessageDigest md5Digest = MessageDigest.getInstance("MD5");
                         String hashNewFile = getFileChecksum(md5Digest, file);
                         if (retorno.equals(hashNewFile)) {
-                            System.out.println("Arquivo baixado com sucesso");
+                            System.out.println("Arquivo [" + fileName + "] baixado com sucesso na pasta: "+path);
+                            fileList.add(fileName);
                             new PeerThread("UPDATE", fileName).start();
                         } else {
-                            System.out.println("Arquivo baixado com erro");
+                            System.out.println("Peer ["+ipPort+"] negou  o download");
                         }
                     }
                     dataInputStream.close();
                     dataInputStream.close();
                     socket.close();
                 } catch (Exception e) {
+                    System.out.println("Peer ["+ipPort+"] negou o download");
                     e.printStackTrace();
                 }
             } else if (this.funcao.equals("UPDATE")) {
-                System.out.println("Send Update for File: " + fileName);
                 Mensagem mensagem = new Mensagem("UPDATE", fileName, peerUrl);
-                System.out.println(mensagem.toString());
                 Mensagem mensagemUpdate = sendEcho(mensagem);
-                System.out.println("Update: " + mensagemUpdate.toString());
             }
         }
     }
@@ -313,7 +302,6 @@ public class Peer {
         // send file hash
         MessageDigest md5Digest = MessageDigest.getInstance("MD5");
         String hash = getFileChecksum(md5Digest, file);
-        System.out.println("Hash sent: " + hash);
 
         dataOutputStream.writeUTF(hash);
 
