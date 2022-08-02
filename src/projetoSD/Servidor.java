@@ -7,7 +7,7 @@ import java.util.stream.Collectors;
 import com.google.gson.Gson;
 
 public class Servidor {
-    ///TODO DELETE THIS
+    /// TODO DELETE THIS
     private static String SERVER_IP = "localhost";
 
     private DatagramSocket socketProcess;
@@ -26,8 +26,8 @@ public class Servidor {
             error = false;
             try {
                 System.out.println("Digite IP do Server");
-                //TODO UNCOMMMENT THIS
-                //entrada = sc.nextLine();
+                // TODO UNCOMMMENT THIS
+                // entrada = sc.nextLine();
                 addressServer = InetAddress.getByName(serverIp);
                 socketProcess = new DatagramSocket(PORT, addressServer);
                 socketAlive = new DatagramSocket(PORT_ALIVE, addressServer);
@@ -36,9 +36,9 @@ public class Servidor {
                 System.out.println("Erro no IP");
                 error = true;
             }
-            
+
         } while (error);
-        
+
         new ServidorThread("ESCUTAR-UDP").start();
         new ServidorThread("ALIVE").start();
     }
@@ -136,10 +136,10 @@ public class Servidor {
                             .collect(Collectors.toList());
                     Mensagem retorno = new Mensagem(listPeers);
                     buf = new Gson().toJson(retorno).getBytes();
-                } else if(mensagem.getAction().equals("UPDATE")){
-                    System.out.println("UPDATE"+mensagem.toString());
+                } else if (mensagem.getAction().equals("UPDATE")) {
+                    System.out.println("UPDATE" + mensagem.toString());
                     List<String> fileList = fileByServer.get(mensagem.getPeerUrl());
-                    if(fileList == null){
+                    if (fileList == null) {
                         fileList = new ArrayList<>();
                     }
                     fileList.add(mensagem.getFileName());

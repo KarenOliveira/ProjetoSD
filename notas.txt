@@ -7,3 +7,5 @@ DOWNLOAD localhost 9094 MCTB001 - NAB2SA - 1q22 - Aula 2.mp4
 
 DOWNLOAD localhost 9091 peer2-teste.txt
 DOWNLOAD localhost 9091 peer1-teste.txt
+
+DOWNLOAD localhost 9098 NAO peer1-teste.txt
