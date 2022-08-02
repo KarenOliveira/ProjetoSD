@@ -100,9 +100,9 @@ public class Peer {
                 String port = entradaA[2];
                 //String autoSearch = entradaA[3];
                 String fileName = entrada.substring(entrada.indexOf(port) + port.length() + 1);
-                if (fileByIpByResultDownload.containsKey(fileName)){
-                    System.out.println("Esse arquivo está sendo procurado em outros peers");
-                }
+                //if (fileByIpByResultDownload.containsKey(fileName)){
+                    //System.out.println("Esse arquivo está sendo procurado em outros peers");
+                //}
                 else {
                     Socket socket = null;
                     try {

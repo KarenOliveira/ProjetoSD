@@ -8,8 +8,6 @@ import com.google.gson.Gson;
 
 public class Servidor {
     /// TODO DELETE THIS
-    private static String SERVER_IP = "localhost";
-
     private DatagramSocket socketProcess;
     private DatagramSocket socketAlive;
     private int PORT = 10098;
@@ -17,7 +15,7 @@ public class Servidor {
     private static final int sleepTime = 30000;
     Map<String, List<String>> fileByServer = new ConcurrentHashMap<>();
 
-    public Servidor(String serverIp) {
+    public Servidor() {
         boolean error;
         String entrada;
         InetAddress addressServer = null;
@@ -27,8 +25,8 @@ public class Servidor {
             try {
                 System.out.println("Digite IP do Server");
                 // TODO UNCOMMMENT THIS
-                // entrada = sc.nextLine();
-                addressServer = InetAddress.getByName(serverIp);
+                entrada = sc.nextLine();
+                addressServer = InetAddress.getByName(entrada);
                 socketProcess = new DatagramSocket(PORT, addressServer);
                 socketAlive = new DatagramSocket(PORT_ALIVE, addressServer);
             } catch (final Exception e) {
@@ -44,7 +42,7 @@ public class Servidor {
     }
 
     public static void main(String[] args) {
-        new Servidor(SERVER_IP);
+        new Servidor();
     }
 
     class ServidorThread extends Thread {
