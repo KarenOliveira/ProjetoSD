@@ -42,7 +42,7 @@ public class Servidor {
     public static void main(String[] args) {
         new Servidor();
     }
-
+    //Cada thread é responsável por escutar um determinado protocolo lembrando que a variável funcao é um String que indica qual protocolo deve ser escutado
     class ServidorThread extends Thread {
         private String funcao;
         private DatagramPacket packet;
@@ -66,6 +66,7 @@ public class Servidor {
 
         public void run() {
             boolean running = true;
+            //Esse if é responsável por escutar o Socket UDP e Delegar para outra thread fazer o processamento (Thread PROCESAR-UDP)
             if (this.funcao.equals("ESCUTAR-UDP")) {
                 while (running) {
                     try {
@@ -77,6 +78,7 @@ public class Servidor {
                     }
                 }
                 socketProcess.close();
+            //Esse if é responsável por orquestrar o ALIVE e Delegar para outra thread fazer o processamento (Thread SEND-ALIVE)
             } else if (this.funcao.equals("ALIVE")) {
                 while (running) {
                     try {
@@ -90,6 +92,7 @@ public class Servidor {
                                 new ServidorThread("SEND-ALIVE", key).start();
                             });
                 }
+            //Esse if é o responsável por enviar o ALIVE aos Peers
             } else if (this.funcao.equals("SEND-ALIVE")) {
                 byte[] buf = new byte[1024];
                 try {
@@ -111,6 +114,7 @@ public class Servidor {
                     System.out.println("Peer " + url + " morto. Eliminando seus arquivos ["+String.join(";", fileByServer.get(url))+"]");
                     fileByServer.remove(url);
                 }
+            //Esse if é o responsável por processar as requisições UDP que chegam ao servidor, a Action da mensagem enviada é que define o processamento
             } else if (this.funcao.equals("PROCESSAR-UDP")) {
                 Mensagem mensagem = new Mensagem(buf);
                 if (mensagem.getAction().equals("JOIN")) {
@@ -134,13 +138,12 @@ public class Servidor {
                     Mensagem retorno = new Mensagem(listPeers);
                     buf = new Gson().toJson(retorno).getBytes();
                 } else if (mensagem.getAction().equals("UPDATE")) {
-                    List<String> fileList = fileByServer.get(mensagem.getPeerUrl());
+                    List<String> fileList = fileByServer.get(Mensagem.buildUrl(packet.getAddress().getHostAddress(), mensagem));
                     if (fileList == null) {
                         fileList = new ArrayList<>();
                     }
                     fileList.add(mensagem.getFileName());
                     fileByServer.put(Mensagem.buildUrl(packet.getAddress().getHostAddress(), mensagem), fileList);
-                    System.out.println("Lista:" + new Gson().toJson(fileByServer));
                     Mensagem retorno = new Mensagem("UPDATE_OK");
                     buf = new Gson().toJson(retorno).getBytes();
                 }

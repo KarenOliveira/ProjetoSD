@@ -26,6 +26,7 @@ public class Peer {
         while (true) {
             System.out.println("Digite Comando:");
             entrada = sc.nextLine();
+            // while responsável pela linha de comando
             if (entrada.startsWith("JOIN")) {
                 DatagramSocket socket = null;
                 try {
@@ -49,6 +50,8 @@ public class Peer {
                     socket = new DatagramSocket(portUdp, address);
                     Mensagem retorno = sendEcho(mensagem);
                     if (retorno.getAction().equals("JOIN_OK")) {
+                        // Caso o retorno do JOIN seja JOIN_OK é criada a escuta para o ALIVE (UDP) e o
+                        // ESCUTAR-TCP (TCP)
                         new PeerThread("ALIVE", socket).start();
                         portsTcp.stream().forEach(port -> {
                             try {
@@ -59,7 +62,8 @@ public class Peer {
                                 e.printStackTrace();
                             }
                         });
-                        System.out.println("Sou Peer ["+ip+"]["+portUdp+"] com arquivos: [" + String.join(",", fileList)+"]");
+                        System.out.println("Sou Peer [" + ip + "][" + portUdp + "] com arquivos: ["
+                                + String.join(",", fileList) + "]");
                     }
 
                 } catch (final ArrayIndexOutOfBoundsException e) {
@@ -101,11 +105,11 @@ public class Peer {
                 Socket socket = null;
                 try {
                     socket = new Socket(ip, Integer.parseInt(port));
-                    new PeerThread("REQUEST-DOWNLOAD", fileName, socket,"["+ip+"]:["+port+"]").start();
+                    new PeerThread("REQUEST-DOWNLOAD", fileName, socket, "[" + ip + "]:[" + port + "]").start();
                 } catch (Exception e) {
-                    System.out.println("Peer ["+ip+"]["+port+"] negou  o download");
+                    System.out.println("Peer [" + ip + "][" + port + "] negou  o download");
                 }
-                
+
             }
         }
     }
@@ -152,6 +156,8 @@ public class Peer {
         }
     }
 
+    // Cada thread é responsável por escutar um determinado protocolo lembrando que
+    // a variável funcao é um String que indica qual protocolo deve ser escutado
     class PeerThread extends Thread {
         private String funcao;
         private byte[] buf = new byte[1024];
@@ -171,7 +177,7 @@ public class Peer {
             this.serverSocket = serverSocket;
         }
 
-        public PeerThread(String funcao, String fileName, Socket socket,String ipPort) {
+        public PeerThread(String funcao, String fileName, Socket socket, String ipPort) {
             this.funcao = funcao;
             this.fileName = fileName;
             this.socket = socket;
@@ -185,6 +191,7 @@ public class Peer {
 
         public void run() {
             boolean running = true;
+            // If responsável por escutar e retornar o ALIVE que vem do Server
             if (this.funcao.equals("ALIVE")) {
                 while (running) {
                     try {
@@ -198,6 +205,8 @@ public class Peer {
                         e.printStackTrace();
                     }
                 }
+                // If responsável por escutar as portas TCP e fazer o processamento da
+                // requisição e enviar o arquivo
             } else if (this.funcao.equals("ESCUTAR-TCP")) {
                 try {
                     String receivedData;
@@ -205,7 +214,6 @@ public class Peer {
                         DataOutputStream dataOutputStream = null;
                         DataInputStream dataInputStream = null;
                         Socket clientSocket = serverSocket.accept();
-                        System.out.println(clientSocket + " connected.");
                         dataInputStream = new DataInputStream(clientSocket.getInputStream());
                         dataOutputStream = new DataOutputStream(clientSocket.getOutputStream());
                         receivedData = dataInputStream.readUTF();
@@ -214,6 +222,7 @@ public class Peer {
                             Mensagem retorno = new Mensagem("DOWNLOAD_NEGADO");
                             dataOutputStream.writeUTF(new Gson().toJson(retorno));
                         } else {
+                            // Negativa Aletória
                             int random = (int) Math.floor(Math.random() * (9 - 0 + 1) + 0);
                             if (random % 2 == 0) {
                                 sendFile(path + "\\" + mensagem.getFileName(), dataOutputStream);
@@ -231,6 +240,9 @@ public class Peer {
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
+                // If responsável por enviar a requisição para a porta TCP e verificar o status
+                // do arquivo, uma vez que o Download foi bem sucedido, realizar o UPDATE com o
+                // Server
             } else if (this.funcao.equals("REQUEST-DOWNLOAD")) {
                 DataOutputStream dataOutputStream = null;
                 DataInputStream dataInputStream = null;
@@ -241,11 +253,13 @@ public class Peer {
                     dataOutputStream.writeUTF(new Gson().toJson(mensagem));
                     boolean isDownloadOk = false;
                     String retorno = "";
+                    // Realizar um tentativa de converter o arquivo para json, caso falhe, entende
+                    // que o que chegou foi o hash do arquivo
                     try {
                         retorno = dataInputStream.readUTF();
                         Mensagem mensagemRetorno = new Gson().fromJson(retorno, Mensagem.class);
                         if (mensagemRetorno.getAction().equals("DOWNLOAD_NEGADO")) {
-                            System.out.println("Peer ["+ipPort+"] negou  o download");
+                            System.out.println("Peer [" + ipPort + "] negou  o download");
                             isDownloadOk = false;
                         }
                     } catch (Exception e) {
@@ -257,19 +271,21 @@ public class Peer {
                         File file = new File(newFile);
                         MessageDigest md5Digest = MessageDigest.getInstance("MD5");
                         String hashNewFile = getFileChecksum(md5Digest, file);
+                        // Compara o hash enviado pelo Peer Origem pelo o que foi salvo pelo Peer
+                        // Destino
                         if (retorno.equals(hashNewFile)) {
-                            System.out.println("Arquivo [" + fileName + "] baixado com sucesso na pasta: "+path);
+                            System.out.println("Arquivo [" + fileName + "] baixado com sucesso na pasta: " + path);
                             fileList.add(fileName);
                             new PeerThread("UPDATE", fileName).start();
                         } else {
-                            System.out.println("Peer ["+ipPort+"] negou  o download");
+                            System.out.println("Peer [" + ipPort + "] negou  o download");
                         }
                     }
                     dataInputStream.close();
                     dataInputStream.close();
                     socket.close();
                 } catch (Exception e) {
-                    System.out.println("Peer ["+ipPort+"] negou o download");
+                    System.out.println("Peer [" + ipPort + "] negou o download");
                     e.printStackTrace();
                 }
             } else if (this.funcao.equals("UPDATE")) {
@@ -279,6 +295,13 @@ public class Peer {
         }
     }
 
+    /**
+     * Método responsável por receber o arquivo
+     * 
+     * @param fileName
+     * @param dataInputStream
+     * @throws Exception
+     */
     private static void receiveFile(String fileName, DataInputStream dataInputStream) throws Exception {
         int bytes = 0;
         File file = new File(fileName); // initialize File object and passing path as argument
@@ -294,6 +317,14 @@ public class Peer {
         fileOutputStream.close();
     }
 
+    /**
+     * Método responsável por enviar o arquivo, ele envia o Hash/Tamanho e próprio
+     * arquivo
+     * 
+     * @param path             - Caminho do arquivo a ser enviado
+     * @param dataOutputStream
+     * @throws Exception
+     */
     private static void sendFile(String path, DataOutputStream dataOutputStream) throws Exception {
         int bytes = 0;
         File file = new File(path);
@@ -316,6 +347,15 @@ public class Peer {
         fileInputStream.close();
     }
 
+    /**
+     * Método responsável por validar via Hash MD5 se o arquivo foi enviado
+     * corretamente
+     * 
+     * @param digest
+     * @param file
+     * @return
+     * @throws IOException
+     */
     private static String getFileChecksum(MessageDigest digest, File file) throws IOException {
         // Get file input stream for reading the file content
         FileInputStream fis = new FileInputStream(file);
