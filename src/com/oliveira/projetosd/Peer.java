@@ -1,4 +1,4 @@
-package projetoSD;
+package com.oliveira.projetosd;
 
 import java.io.*;
 import java.net.*;

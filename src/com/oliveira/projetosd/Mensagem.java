@@ -1,10 +1,11 @@
-package projetoSD;
+package com.oliveira.projetosd;
 
 import java.io.StringReader;
 import java.util.*;
 
 import com.google.gson.Gson;
 import com.google.gson.stream.JsonReader;
+
 public class Mensagem {
     private List<String> fileList;
     private String action;
